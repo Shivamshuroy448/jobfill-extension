@@ -21,6 +21,9 @@
       : window.HTMLInputElement.prototype;
       
     const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+    if (element._valueTracker) {
+      element._valueTracker.setValue("");
+    }
     if (descriptor && descriptor.set) {
       descriptor.set.call(element, value);
     } else {
@@ -182,6 +185,96 @@
     return null;
   }
 
+  // Safely set date input value using insertText and React prototype setter without mask corruption
+  function setNativeDateValue(element, dateStr) {
+    if (!element || !dateStr) return false;
+
+    element.focus();
+
+    // Reset React value tracker if present
+    if (element._valueTracker) {
+      element._valueTracker.setValue("");
+    }
+
+    // 1. Clear existing value cleanly via prototype setter
+    const prototype = window.HTMLInputElement.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+    if (descriptor && descriptor.set) {
+      descriptor.set.call(element, "");
+    } else {
+      element.value = "";
+    }
+    element.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
+
+    // 2. Try document.execCommand('insertText') to simulate native user typing/pasting
+    let insertSuccess = false;
+    try {
+      element.select();
+      insertSuccess = document.execCommand("insertText", false, dateStr);
+    } catch (e) {
+      insertSuccess = false;
+    }
+
+    // 3. If execCommand was not effective or didn't set date, set via descriptor
+    if (!insertSuccess || element.value !== dateStr) {
+      if (element._valueTracker) {
+        element._valueTracker.setValue("");
+      }
+      if (descriptor && descriptor.set) {
+        descriptor.set.call(element, dateStr);
+      } else {
+        element.value = dateStr;
+      }
+    }
+
+    // 4. Dispatch bubbling event cascade
+    element.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    element.dispatchEvent(new Event("blur", { bubbles: true, cancelable: true }));
+
+    element.classList.add("jobfill-highlight");
+    return true;
+  }
+
+  // Find the exact ancestor container for a section header without engulfing sibling sections
+  function getSectionCard(headerEl, headerRegex) {
+    let card = headerEl.parentElement;
+    let bestCard = card;
+    while (card && card !== document.body) {
+      const isCardBoundary = card.matches && card.matches('fieldset, [data-automation-id*="workExperience" i], [data-automation-id*="education" i], [data-automation-id*="panel" i], [data-automation-id*="compositeSubform" i], [role="region"], [role="group"]');
+
+      const headersInCard = Array.from(card.querySelectorAll("h1, h2, h3, h4, h5, h6, legend, div, span, p"))
+        .filter(el => {
+          const t = (el.innerText || el.textContent || "").trim();
+          return headerRegex.test(t);
+        });
+
+      const uniqueHeaders = Array.from(new Set(headersInCard.map(h => (h.innerText || "").trim())));
+      if (uniqueHeaders.length <= 1) {
+        bestCard = card;
+        // If this container is an explicit card boundary with at least 2 inputs, stop climbing
+        if (isCardBoundary && card.querySelectorAll("input:not([type='hidden']), textarea, select").length >= 2) {
+          break;
+        }
+        // If parent container contains other major sections, stop climbing
+        if (card.parentElement && card.parentElement !== document.body) {
+          const siblingCards = Array.from(card.parentElement.children).filter(child => child !== card);
+          const hasSiblingSection = siblingCards.some(child => {
+            const childText = (child.innerText || "").toLowerCase();
+            return /(education|work experience|websites|resume|skills|personal information)/.test(childText);
+          });
+          if (hasSiblingSection && card.querySelectorAll("input:not([type='hidden']), textarea, select").length >= 2) {
+            break;
+          }
+        }
+        card = card.parentElement;
+      } else {
+        break;
+      }
+    }
+    return bestCard;
+  }
+
   // Populate an individual Work Experience card/block
   function fillWorkExperienceBlock(container, exp, filledList, blockPrefix) {
     if (!container || !exp) return;
@@ -230,35 +323,41 @@
       }
     }
 
-    // 5. From Date (MM/YYYY)
-    const fromEl = getInputByLabelOrSelector(container, /^(from|start[-_\s]?date|start)$/i, [
-      '[data-automation-id*="startDate" i] input',
-      'input[data-automation-id*="startDate" i]',
-      'input[placeholder*="YYYY" i]',
-      'input[placeholder*="MM" i]'
-    ]);
-    if (fromEl && (!fromEl.value || fromEl.value.trim().length === 0)) {
-      const fromVal = formatMMYYYY(exp.startMonth, exp.startYear);
-      if (fromVal && setNativeValue(fromEl, fromVal)) filledList.push(`${blockPrefix}-from`);
-    }
+    // 5. From & To Dates (MM/YYYY)
+    const dateInputs = Array.from(container.querySelectorAll('input[placeholder*="YYYY" i], input[placeholder*="MM" i], input[data-automation-id*="date" i]')).filter(isFillable);
+    const fromVal = formatMMYYYY(exp.startMonth, exp.startYear);
+    const toVal = formatMMYYYY(exp.endMonth, exp.endYear);
 
-    // 6. To Date (MM/YYYY)
-    let toEl = getInputByLabelOrSelector(container, /^(to|end[-_\s]?date|end)$/i, [
-      '[data-automation-id*="endDate" i] input',
-      'input[data-automation-id*="endDate" i]'
-    ]);
-    if (!toEl) {
-      const dateInputs = Array.from(container.querySelectorAll('input[placeholder*="YYYY" i], input[placeholder*="MM" i]')).filter(isFillable);
-      if (dateInputs.length >= 2) {
-        toEl = dateInputs[1];
+    if (dateInputs.length >= 2) {
+      if (fromVal) {
+        setNativeDateValue(dateInputs[0], fromVal);
+        filledList.push(`${blockPrefix}-from`);
+      }
+      if (toVal) {
+        setNativeDateValue(dateInputs[1], toVal);
+        filledList.push(`${blockPrefix}-to`);
+      }
+    } else {
+      const fromEl = getInputByLabelOrSelector(container, /^(from|start[-_\s]?date|start)$/i, [
+        '[data-automation-id*="startDate" i] input',
+        'input[data-automation-id*="startDate" i]'
+      ]);
+      if (fromEl && fromVal) {
+        setNativeDateValue(fromEl, fromVal);
+        filledList.push(`${blockPrefix}-from`);
+      }
+
+      const toEl = getInputByLabelOrSelector(container, /^(to|end[-_\s]?date|end)$/i, [
+        '[data-automation-id*="endDate" i] input',
+        'input[data-automation-id*="endDate" i]'
+      ]);
+      if (toEl && toVal) {
+        setNativeDateValue(toEl, toVal);
+        filledList.push(`${blockPrefix}-to`);
       }
     }
-    if (toEl && (!toEl.value || toEl.value.trim().length === 0)) {
-      const toVal = formatMMYYYY(exp.endMonth, exp.endYear);
-      if (toVal && setNativeValue(toEl, toVal)) filledList.push(`${blockPrefix}-to`);
-    }
 
-    // 7. Role Description
+    // 6. Role Description
     const descEl = getInputByLabelOrSelector(container, /(description|responsibilities|summary|duties)/i, [
       'textarea[data-automation-id*="roleDescription" i]',
       'textarea[data-automation-id*="description" i]',
@@ -309,23 +408,24 @@
       if (setNativeValue(gpaEl, edu.gpa)) filledList.push(`${blockPrefix}-gpa`);
     }
 
-    // From Date
-    const fromEl = getInputByLabelOrSelector(container, /^(from|start[-_\s]?date)$/i, [
-      '[data-automation-id*="startDate" i] input',
-      'input[placeholder*="YYYY" i]'
-    ]);
-    if (fromEl && (!fromEl.value || fromEl.value.trim().length === 0)) {
-      const fVal = formatMMYYYY(edu.startMonth, edu.startYear);
-      if (fVal && setNativeValue(fromEl, fVal)) filledList.push(`${blockPrefix}-from`);
-    }
+    // From & To Dates (MM/YYYY)
+    const eduDateInputs = Array.from(container.querySelectorAll('input[placeholder*="YYYY" i], input[placeholder*="MM" i], input[data-automation-id*="date" i]')).filter(isFillable);
+    const fVal = formatMMYYYY(edu.startMonth, edu.startYear);
+    const tVal = formatMMYYYY(edu.endMonth, edu.endYear);
 
-    // To Date
-    const toEl = getInputByLabelOrSelector(container, /^(to|end[-_\s]?date|expected[-_\s]?graduation)$/i, [
-      '[data-automation-id*="endDate" i] input'
-    ]);
-    if (toEl && (!toEl.value || toEl.value.trim().length === 0)) {
-      const tVal = formatMMYYYY(edu.endMonth, edu.endYear);
-      if (tVal && setNativeValue(toEl, tVal)) filledList.push(`${blockPrefix}-to`);
+    if (eduDateInputs.length >= 2) {
+      if (fVal) { setNativeDateValue(eduDateInputs[0], fVal); filledList.push(`${blockPrefix}-from`); }
+      if (tVal) { setNativeDateValue(eduDateInputs[1], tVal); filledList.push(`${blockPrefix}-to`); }
+    } else {
+      const fromEl = getInputByLabelOrSelector(container, /^(from|start[-_\s]?date)$/i, [
+        '[data-automation-id*="startDate" i] input'
+      ]);
+      if (fromEl && fVal) { setNativeDateValue(fromEl, fVal); filledList.push(`${blockPrefix}-from`); }
+
+      const toEl = getInputByLabelOrSelector(container, /^(to|end[-_\s]?date|expected[-_\s]?graduation)$/i, [
+        '[data-automation-id*="endDate" i] input'
+      ]);
+      if (toEl && tVal) { setNativeDateValue(toEl, tVal); filledList.push(`${blockPrefix}-to`); }
     }
   }
 
@@ -404,11 +504,14 @@
     // ==========================================
     // WORKDAY EXPERIENCE CARDS & NUMBERED BLOCKS
     // ==========================================
-    // Find headings like "Work Experience 1", "Work Experience 2", "Work Experience 3", "Work Experience"
+    const expRegex = /^Work Experience(\s*#?\s*\d+)?$/i;
     const allCandidateHeaders = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6, legend, div, span, p"));
     const expHeaders = allCandidateHeaders.filter(el => {
       const t = (el.innerText || el.textContent || "").trim();
-      return /^Work Experience(\s*#?\s*\d+)?$/i.test(t);
+      if (!expRegex.test(t)) return false;
+      const childMatch = el.querySelector("h1, h2, h3, h4, h5, h6, legend, div, span, p");
+      if (childMatch && expRegex.test((childMatch.innerText || "").trim())) return false;
+      return true;
     });
 
     if (expHeaders.length > 0) {
@@ -417,16 +520,13 @@
         const match = text.match(/Work Experience\s*#?\s*(\d+)/i);
         let roleIdx = idx;
         if (match && match[1]) {
-          roleIdx = parseInt(match[1], 10) - 1; // "Work Experience 3" -> index 2
+          roleIdx = parseInt(match[1], 10) - 1; // "Work Experience 3" -> index 2 (NIC)
         }
 
         if (profile.experience[roleIdx]) {
-          let container = hdr.closest('[data-automation-id*="workExperience" i], fieldset, [role="region"], section, div');
-          while (container && container !== document.body && container.querySelectorAll("input:not([type='hidden']), textarea").length < 2) {
-            container = container.parentElement;
-          }
-          if (container && container !== document.body) {
-            fillWorkExperienceBlock(container, profile.experience[roleIdx], filled, `workExperience-${roleIdx + 1}`);
+          const card = getSectionCard(hdr, expRegex);
+          if (card) {
+            fillWorkExperienceBlock(card, profile.experience[roleIdx], filled, `workExperience-${roleIdx + 1}`);
           }
         }
       });
@@ -439,24 +539,19 @@
             fillWorkExperienceBlock(block, profile.experience[idx], filled, `workExperience-${idx + 1}`);
           }
         });
-      } else {
-        // Fallback: search across all title inputs
-        const titleInputs = Array.from(document.querySelectorAll('[data-automation-id*="jobTitle" i] input, input[data-automation-id*="jobTitle" i], input[name*="title" i]')).filter(isFillable);
-        titleInputs.forEach((tEl, i) => {
-          if (profile.experience[i]) {
-            const block = tEl.closest('fieldset, form, div') || document;
-            fillWorkExperienceBlock(block, profile.experience[i], filled, `workExperience-${i + 1}`);
-          }
-        });
       }
     }
 
     // ==========================================
     // WORKDAY EDUCATION CARDS & NUMBERED BLOCKS
     // ==========================================
+    const eduRegex = /^Education(\s*#?\s*\d+)?$/i;
     const eduHeaders = allCandidateHeaders.filter(el => {
       const t = (el.innerText || el.textContent || "").trim();
-      return /^Education(\s*#?\s*\d+)?$/i.test(t);
+      if (!eduRegex.test(t)) return false;
+      const childMatch = el.querySelector("h1, h2, h3, h4, h5, h6, legend, div, span, p");
+      if (childMatch && eduRegex.test((childMatch.innerText || "").trim())) return false;
+      return true;
     });
 
     if (eduHeaders.length > 0) {
@@ -468,12 +563,9 @@
           eduIdx = parseInt(match[1], 10) - 1;
         }
         if (profile.education[eduIdx]) {
-          let container = hdr.closest('[data-automation-id*="education" i], fieldset, [role="region"], section, div');
-          while (container && container !== document.body && container.querySelectorAll("input:not([type='hidden'])").length < 2) {
-            container = container.parentElement;
-          }
-          if (container && container !== document.body) {
-            fillEducationBlock(container, profile.education[eduIdx], filled, `education-${eduIdx + 1}`);
+          const card = getSectionCard(hdr, eduRegex);
+          if (card) {
+            fillEducationBlock(card, profile.education[eduIdx], filled, `education-${eduIdx + 1}`);
           }
         }
       });
@@ -673,16 +765,6 @@
         val: profile.experience[0].location || (profile.personal.city + ", " + profile.personal.stateCode)
       },
       {
-        field: "fromDate",
-        regex: /(^from\b|start[-_\s]?date)/i,
-        val: formatMMYYYY(profile.experience[0].startMonth, profile.experience[0].startYear)
-      },
-      {
-        field: "toDate",
-        regex: /(^to\b|end[-_\s]?date)/i,
-        val: formatMMYYYY(profile.experience[0].endMonth, profile.experience[0].endYear)
-      },
-      {
         field: "description",
         regex: /(role[-_\s]?description|job[-_\s]?description|^description$|responsibilities)/i,
         val: profile.experience[0].description
@@ -749,15 +831,17 @@
       filled = autofillAshby(profile);
     }
 
-    // Always run universal heuristic as a safety pass to catch custom questions
-    const universalFilled = autofillUniversal(profile);
-    const combined = Array.from(new Set([...filled, ...universalFilled]));
+    // Run universal heuristic only for non-Workday platforms to protect Workday multi-card state
+    if (platform !== "Workday") {
+      const universalFilled = autofillUniversal(profile);
+      filled = Array.from(new Set([...filled, ...universalFilled]));
+    }
 
     return {
       success: true,
       platform,
-      count: combined.length,
-      fields: combined
+      count: filled.length,
+      fields: filled
     };
   }
 
