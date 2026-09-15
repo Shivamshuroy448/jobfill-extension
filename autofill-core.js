@@ -85,22 +85,248 @@
     return "Universal";
   }
 
+  // Helper: check if element is visible and interactive
+  function isFillable(el) {
+    if (!el) return false;
+    if (el.disabled || el.readOnly) return false;
+    return el.offsetParent !== null || el.getClientRects().length > 0;
+  }
+
+  // Format month and year to MM/YYYY
+  function formatMMYYYY(monthStr, yearStr) {
+    if (!yearStr) return "";
+    const monthMap = {
+      january: "01", jan: "01", "1": "01", "01": "01",
+      february: "02", feb: "02", "2": "02", "02": "02",
+      march: "03", mar: "03", "3": "03", "03": "03",
+      april: "04", apr: "04", "4": "04", "04": "04",
+      may: "05", "5": "05", "05": "05",
+      june: "06", jun: "06", "6": "06", "06": "06",
+      july: "07", jul: "07", "7": "07", "07": "07",
+      august: "08", aug: "08", "8": "08", "08": "08",
+      september: "09", sep: "09", sept: "09", "9": "09", "09": "09",
+      october: "10", oct: "10", "10": "10",
+      november: "11", nov: "11", "11": "11",
+      december: "12", dec: "12", "12": "12"
+    };
+    const m = (monthStr || "").toLowerCase().trim();
+    const mm = monthMap[m] || "01";
+    return `${mm}/${yearStr.trim()}`;
+  }
+
   // Helper: query selector with multiple fallback patterns
   function findField(selectors) {
     for (const sel of selectors) {
       const el = document.querySelector(sel);
-      if (el && !el.disabled && el.offsetParent !== null) return el;
+      if (el && isFillable(el)) return el;
     }
     return null;
   }
 
-  // Helper: query all elements matching
-  function findFields(selectors) {
-    for (const sel of selectors) {
-      const els = document.querySelectorAll(sel);
-      if (els && els.length > 0) return Array.from(els);
+  // Find input or textarea by checking labels, aria-labels, placeholders, or fallback selectors
+  function getInputByLabelOrSelector(container, labelRegex, fallbackSelectors = []) {
+    if (!container) return null;
+
+    // 1. Search labels within container
+    const labels = Array.from(container.querySelectorAll("label, div[data-automation-id*='formLabel'], span, p, legend"));
+    for (const lbl of labels) {
+      const text = (lbl.innerText || lbl.textContent || "").trim();
+      const cleanText = text.replace(/[*:\s]+$/, "").trim();
+      if (cleanText && labelRegex.test(cleanText)) {
+        // Method A: htmlFor
+        if (lbl.htmlFor) {
+          const el = document.getElementById(lbl.htmlFor);
+          if (el && isFillable(el)) return el;
+        }
+        // Method B: Nested input
+        const nested = lbl.querySelector("input:not([type='hidden']), textarea, select");
+        if (nested && isFillable(nested)) return nested;
+
+        // Method C: Parent or wrapper container input
+        const wrapper = lbl.closest("div, fieldset, li, td");
+        if (wrapper) {
+          const candidate = wrapper.querySelector("input:not([type='hidden']), textarea, select");
+          if (candidate && isFillable(candidate)) return candidate;
+        }
+
+        // Method D: Next element sibling
+        let sibling = lbl.nextElementSibling;
+        while (sibling) {
+          if (sibling.matches && sibling.matches("input:not([type='hidden']), textarea, select") && isFillable(sibling)) {
+            return sibling;
+          }
+          const nestedSib = sibling.querySelector && sibling.querySelector("input:not([type='hidden']), textarea, select");
+          if (nestedSib && isFillable(nestedSib)) return nestedSib;
+          sibling = sibling.nextElementSibling;
+        }
+      }
     }
-    return [];
+
+    // 2. Search inputs by aria-label, placeholder, or name
+    const allInputs = Array.from(container.querySelectorAll("input:not([type='hidden']):not([type='submit']):not([type='button']), textarea, select"));
+    for (const inp of allInputs) {
+      const aria = inp.getAttribute("aria-label") || "";
+      const ph = inp.getAttribute("placeholder") || "";
+      const name = inp.getAttribute("name") || "";
+      if (labelRegex.test(aria) || labelRegex.test(ph) || labelRegex.test(name)) {
+        if (isFillable(inp)) return inp;
+      }
+    }
+
+    // 3. Fallback CSS selectors
+    for (const sel of fallbackSelectors) {
+      const el = container.querySelector(sel);
+      if (el && isFillable(el)) return el;
+    }
+
+    return null;
+  }
+
+  // Populate an individual Work Experience card/block
+  function fillWorkExperienceBlock(container, exp, filledList, blockPrefix) {
+    if (!container || !exp) return;
+
+    // 1. Job Title
+    const titleEl = getInputByLabelOrSelector(container, /^(job[-_\s]?title|title|position)$/i, [
+      '[data-automation-id*="jobTitle" i] input',
+      'input[data-automation-id*="jobTitle" i]',
+      '[data-automation-id*="title" i] input',
+      'input[data-automation-id*="title" i]',
+      'input[name*="title" i]'
+    ]);
+    if (titleEl && (!titleEl.value || titleEl.value.trim().length === 0)) {
+      if (setNativeValue(titleEl, exp.title)) filledList.push(`${blockPrefix}-title`);
+    }
+
+    // 2. Company
+    const compEl = getInputByLabelOrSelector(container, /^(company|employer|organization|company[-_\s]?name)$/i, [
+      '[data-automation-id*="company" i] input',
+      'input[data-automation-id*="company" i]',
+      'input[name*="company" i]'
+    ]);
+    if (compEl && (!compEl.value || compEl.value.trim().length === 0)) {
+      if (setNativeValue(compEl, exp.company)) filledList.push(`${blockPrefix}-company`);
+    }
+
+    // 3. Location
+    const locEl = getInputByLabelOrSelector(container, /^(location|city|job[-_\s]?location)$/i, [
+      '[data-automation-id*="location" i] input',
+      'input[data-automation-id*="location" i]',
+      'input[name*="location" i]'
+    ]);
+    if (locEl && (!locEl.value || locEl.value.trim().length === 0)) {
+      if (setNativeValue(locEl, exp.location)) filledList.push(`${blockPrefix}-location`);
+    }
+
+    // 4. Currently work here (Checkbox)
+    const curCb = container.querySelector('input[type="checkbox"][data-automation-id*="currentlyWorkHere" i]') ||
+                  getInputByLabelOrSelector(container, /currently work here/i, ['input[type="checkbox"]']);
+    if (curCb && curCb.type === "checkbox") {
+      if (exp.isCurrent && !curCb.checked) {
+        clickElement(curCb);
+        filledList.push(`${blockPrefix}-currentlyWorkHere`);
+      } else if (!exp.isCurrent && curCb.checked) {
+        clickElement(curCb);
+      }
+    }
+
+    // 5. From Date (MM/YYYY)
+    const fromEl = getInputByLabelOrSelector(container, /^(from|start[-_\s]?date|start)$/i, [
+      '[data-automation-id*="startDate" i] input',
+      'input[data-automation-id*="startDate" i]',
+      'input[placeholder*="YYYY" i]',
+      'input[placeholder*="MM" i]'
+    ]);
+    if (fromEl && (!fromEl.value || fromEl.value.trim().length === 0)) {
+      const fromVal = formatMMYYYY(exp.startMonth, exp.startYear);
+      if (fromVal && setNativeValue(fromEl, fromVal)) filledList.push(`${blockPrefix}-from`);
+    }
+
+    // 6. To Date (MM/YYYY)
+    let toEl = getInputByLabelOrSelector(container, /^(to|end[-_\s]?date|end)$/i, [
+      '[data-automation-id*="endDate" i] input',
+      'input[data-automation-id*="endDate" i]'
+    ]);
+    if (!toEl) {
+      const dateInputs = Array.from(container.querySelectorAll('input[placeholder*="YYYY" i], input[placeholder*="MM" i]')).filter(isFillable);
+      if (dateInputs.length >= 2) {
+        toEl = dateInputs[1];
+      }
+    }
+    if (toEl && (!toEl.value || toEl.value.trim().length === 0)) {
+      const toVal = formatMMYYYY(exp.endMonth, exp.endYear);
+      if (toVal && setNativeValue(toEl, toVal)) filledList.push(`${blockPrefix}-to`);
+    }
+
+    // 7. Role Description
+    const descEl = getInputByLabelOrSelector(container, /(description|responsibilities|summary|duties)/i, [
+      'textarea[data-automation-id*="roleDescription" i]',
+      'textarea[data-automation-id*="description" i]',
+      'textarea'
+    ]);
+    if (descEl && (!descEl.value || descEl.value.trim().length === 0)) {
+      if (setNativeValue(descEl, exp.description)) filledList.push(`${blockPrefix}-description`);
+    }
+  }
+
+  // Populate an individual Education card/block
+  function fillEducationBlock(container, edu, filledList, blockPrefix) {
+    if (!container || !edu) return;
+
+    // School
+    const schoolEl = getInputByLabelOrSelector(container, /^(school|university|institution|college)$/i, [
+      '[data-automation-id*="school" i] input',
+      'input[data-automation-id*="school" i]'
+    ]);
+    if (schoolEl && (!schoolEl.value || schoolEl.value.trim().length === 0)) {
+      if (setNativeValue(schoolEl, edu.school)) filledList.push(`${blockPrefix}-school`);
+    }
+
+    // Degree
+    const degreeEl = getInputByLabelOrSelector(container, /^(degree|degree[-_\s]?type)$/i, [
+      '[data-automation-id*="degree" i] input',
+      'input[data-automation-id*="degree" i]'
+    ]);
+    if (degreeEl && (!degreeEl.value || degreeEl.value.trim().length === 0)) {
+      if (setNativeValue(degreeEl, edu.degree)) filledList.push(`${blockPrefix}-degree`);
+    }
+
+    // Field of Study / Major
+    const majorEl = getInputByLabelOrSelector(container, /^(field[-_\s]?of[-_\s]?study|major|area[-_\s]?of[-_\s]?study)$/i, [
+      '[data-automation-id*="field-of-study" i] input',
+      'input[data-automation-id*="field-of-study" i]'
+    ]);
+    if (majorEl && (!majorEl.value || majorEl.value.trim().length === 0)) {
+      if (setNativeValue(majorEl, edu.major || edu.fieldOfStudy)) filledList.push(`${blockPrefix}-major`);
+    }
+
+    // GPA
+    const gpaEl = getInputByLabelOrSelector(container, /^(gpa|overall[-_\s]?result|grade[-_\s]?point[-_\s]?average)$/i, [
+      '[data-automation-id*="gpa" i] input',
+      'input[data-automation-id*="gpa" i]'
+    ]);
+    if (gpaEl && (!gpaEl.value || gpaEl.value.trim().length === 0)) {
+      if (setNativeValue(gpaEl, edu.gpa)) filledList.push(`${blockPrefix}-gpa`);
+    }
+
+    // From Date
+    const fromEl = getInputByLabelOrSelector(container, /^(from|start[-_\s]?date)$/i, [
+      '[data-automation-id*="startDate" i] input',
+      'input[placeholder*="YYYY" i]'
+    ]);
+    if (fromEl && (!fromEl.value || fromEl.value.trim().length === 0)) {
+      const fVal = formatMMYYYY(edu.startMonth, edu.startYear);
+      if (fVal && setNativeValue(fromEl, fVal)) filledList.push(`${blockPrefix}-from`);
+    }
+
+    // To Date
+    const toEl = getInputByLabelOrSelector(container, /^(to|end[-_\s]?date|expected[-_\s]?graduation)$/i, [
+      '[data-automation-id*="endDate" i] input'
+    ]);
+    if (toEl && (!toEl.value || toEl.value.trim().length === 0)) {
+      const tVal = formatMMYYYY(edu.endMonth, edu.endYear);
+      if (tVal && setNativeValue(toEl, tVal)) filledList.push(`${blockPrefix}-to`);
+    }
   }
 
   // ==========================================
@@ -130,7 +356,7 @@
         `input[data-automation-id="${item.id}"]`,
         `[data-automation-id="${item.id}"]`
       ]);
-      if (el && item.val) {
+      if (el && item.val && (!el.value || el.value.trim().length === 0)) {
         if (setNativeValue(el, item.val)) filled.push(item.id);
       }
     });
@@ -141,13 +367,12 @@
       `[data-automation-id="addressSection_countryRegion"] input`,
       `[data-automation-id="addressSection_countryRegion"]`
     ]);
-    if (stateEl) {
+    if (stateEl && (!stateEl.value || stateEl.value.trim().length === 0)) {
       setSelectValue(stateEl, profile.personal.state);
       filled.push("state");
     }
 
     // Workday Legal / Sponsorship radios
-    // Look for questions with "authorized" or "sponsorship"
     const radioContainers = document.querySelectorAll('[data-automation-id*="formLabel"], fieldset, [role="radiogroup"]');
     radioContainers.forEach(container => {
       const text = (container.innerText || "").toLowerCase();
@@ -156,7 +381,7 @@
       if (text.includes("authorized to work") || text.includes("legally authorized")) {
         const yesRadio = container.querySelector('input[value*="yes" i], input[data-automation-id*="yes" i], input[id*="yes" i]') ||
                          Array.from(container.querySelectorAll('label, button, input[type="radio"]')).find(l => l.innerText && l.innerText.trim().toLowerCase() === "yes");
-        if (yesRadio) {
+        if (yesRadio && !yesRadio.checked) {
           clickElement(yesRadio);
           filled.push("authorized-yes");
         }
@@ -169,64 +394,94 @@
           const t = (l.innerText || l.value || "").trim().toLowerCase();
           return targetVal ? (t === "yes" || t === "true") : (t === "no" || t === "false");
         });
-        if (radio) {
+        if (radio && !radio.checked) {
           clickElement(radio);
           filled.push("sponsorship-" + (targetVal ? "yes" : "no"));
         }
       }
     });
 
-    // Work Experience Sections in Workday (Supports sequential mapping for multiple roles)
-    const expBlocks = document.querySelectorAll('[data-automation-id*="workExperienceSection"], [data-automation-id*="WorkExperience"], fieldset[data-automation-id*="experience"]');
-    if (expBlocks && expBlocks.length > 0) {
-      expBlocks.forEach((block, idx) => {
-        if (profile.experience[idx]) {
-          const exp = profile.experience[idx];
-          const tEl = block.querySelector('[data-automation-id*="jobTitle"] input, input[data-automation-id*="jobTitle"], [data-automation-id*="title"] input, input[data-automation-id*="title"]');
-          const cEl = block.querySelector('[data-automation-id*="company"] input, input[data-automation-id*="company"]');
-          const lEl = block.querySelector('[data-automation-id*="location"] input, input[data-automation-id*="location"]');
-          const dEl = block.querySelector('[data-automation-id*="roleDescription"] textarea, textarea[data-automation-id*="roleDescription"], textarea[data-automation-id*="description"]');
-          if (tEl && setNativeValue(tEl, exp.title)) filled.push(`exp-${idx}-title`);
-          if (cEl && setNativeValue(cEl, exp.company)) filled.push(`exp-${idx}-company`);
-          if (lEl && setNativeValue(lEl, exp.location)) filled.push(`exp-${idx}-location`);
-          if (dEl && setNativeValue(dEl, exp.description)) filled.push(`exp-${idx}-desc`);
+    // ==========================================
+    // WORKDAY EXPERIENCE CARDS & NUMBERED BLOCKS
+    // ==========================================
+    // Find headings like "Work Experience 1", "Work Experience 2", "Work Experience 3", "Work Experience"
+    const allCandidateHeaders = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6, legend, div, span, p"));
+    const expHeaders = allCandidateHeaders.filter(el => {
+      const t = (el.innerText || el.textContent || "").trim();
+      return /^Work Experience(\s*#?\s*\d+)?$/i.test(t);
+    });
+
+    if (expHeaders.length > 0) {
+      expHeaders.forEach((hdr, idx) => {
+        const text = (hdr.innerText || hdr.textContent || "").trim();
+        const match = text.match(/Work Experience\s*#?\s*(\d+)/i);
+        let roleIdx = idx;
+        if (match && match[1]) {
+          roleIdx = parseInt(match[1], 10) - 1; // "Work Experience 3" -> index 2
+        }
+
+        if (profile.experience[roleIdx]) {
+          let container = hdr.closest('[data-automation-id*="workExperience" i], fieldset, [role="region"], section, div');
+          while (container && container !== document.body && container.querySelectorAll("input:not([type='hidden']), textarea").length < 2) {
+            container = container.parentElement;
+          }
+          if (container && container !== document.body) {
+            fillWorkExperienceBlock(container, profile.experience[roleIdx], filled, `workExperience-${roleIdx + 1}`);
+          }
         }
       });
     } else {
-      // Fallback: Individual experience fields if not grouped into separate section containers
-      const titleInputs = Array.from(document.querySelectorAll('[data-automation-id="jobTitle"], input[data-automation-id="jobTitle"], [data-automation-id*="jobTitle"] input'));
-      const companyInputs = Array.from(document.querySelectorAll('[data-automation-id="company"], input[data-automation-id="company"], [data-automation-id*="company"] input'));
-      const locationInputs = Array.from(document.querySelectorAll('[data-automation-id="location"], input[data-automation-id="location"], [data-automation-id*="location"] input'));
-      const descInputs = Array.from(document.querySelectorAll('textarea[data-automation-id*="roleDescription"], textarea[data-automation-id*="description"], [data-automation-id*="roleDescription"] textarea'));
-
-      titleInputs.forEach((el, i) => {
-        if (profile.experience[i] && setNativeValue(el, profile.experience[i].title)) filled.push(`exp-${i}-title`);
-      });
-      companyInputs.forEach((el, i) => {
-        if (profile.experience[i] && setNativeValue(el, profile.experience[i].company)) filled.push(`exp-${i}-company`);
-      });
-      locationInputs.forEach((el, i) => {
-        if (profile.experience[i] && setNativeValue(el, profile.experience[i].location)) filled.push(`exp-${i}-location`);
-      });
-      descInputs.forEach((el, i) => {
-        if (profile.experience[i] && setNativeValue(el, profile.experience[i].description)) filled.push(`exp-${i}-desc`);
-      });
+      // Fallback: look for [data-automation-id*="workExperience"] containers
+      const expBlocks = Array.from(document.querySelectorAll('[data-automation-id*="workExperience" i], [data-automation-id*="WorkExperience" i], fieldset[data-automation-id*="experience" i]'));
+      if (expBlocks.length > 0) {
+        expBlocks.forEach((block, idx) => {
+          if (profile.experience[idx]) {
+            fillWorkExperienceBlock(block, profile.experience[idx], filled, `workExperience-${idx + 1}`);
+          }
+        });
+      } else {
+        // Fallback: search across all title inputs
+        const titleInputs = Array.from(document.querySelectorAll('[data-automation-id*="jobTitle" i] input, input[data-automation-id*="jobTitle" i], input[name*="title" i]')).filter(isFillable);
+        titleInputs.forEach((tEl, i) => {
+          if (profile.experience[i]) {
+            const block = tEl.closest('fieldset, form, div') || document;
+            fillWorkExperienceBlock(block, profile.experience[i], filled, `workExperience-${i + 1}`);
+          }
+        });
+      }
     }
 
-    // Education in Workday
-    const eduBlocks = document.querySelectorAll('[data-automation-id*="educationSection"], [data-automation-id*="Education"], fieldset[data-automation-id*="education"]');
-    if (eduBlocks && eduBlocks.length > 0) {
+    // ==========================================
+    // WORKDAY EDUCATION CARDS & NUMBERED BLOCKS
+    // ==========================================
+    const eduHeaders = allCandidateHeaders.filter(el => {
+      const t = (el.innerText || el.textContent || "").trim();
+      return /^Education(\s*#?\s*\d+)?$/i.test(t);
+    });
+
+    if (eduHeaders.length > 0) {
+      eduHeaders.forEach((hdr, idx) => {
+        const text = (hdr.innerText || hdr.textContent || "").trim();
+        const match = text.match(/Education\s*#?\s*(\d+)/i);
+        let eduIdx = idx;
+        if (match && match[1]) {
+          eduIdx = parseInt(match[1], 10) - 1;
+        }
+        if (profile.education[eduIdx]) {
+          let container = hdr.closest('[data-automation-id*="education" i], fieldset, [role="region"], section, div');
+          while (container && container !== document.body && container.querySelectorAll("input:not([type='hidden'])").length < 2) {
+            container = container.parentElement;
+          }
+          if (container && container !== document.body) {
+            fillEducationBlock(container, profile.education[eduIdx], filled, `education-${eduIdx + 1}`);
+          }
+        }
+      });
+    } else {
+      const eduBlocks = Array.from(document.querySelectorAll('[data-automation-id*="educationSection" i], [data-automation-id*="Education" i], fieldset[data-automation-id*="education" i]'));
       eduBlocks.forEach((block, idx) => {
         if (profile.education[idx]) {
-          const edu = profile.education[idx];
-          const sEl = block.querySelector('[data-automation-id*="school"] input, input[data-automation-id*="school"]');
-          const dEl = block.querySelector('[data-automation-id*="degree"] input, input[data-automation-id*="degree"]');
-          const mEl = block.querySelector('[data-automation-id*="field-of-study"] input, input[data-automation-id*="field-of-study"]');
-          const gEl = block.querySelector('[data-automation-id*="gpa"] input, input[data-automation-id*="gpa"]');
-          if (sEl && setNativeValue(sEl, edu.school)) filled.push(`edu-${idx}-school`);
-          if (dEl && setNativeValue(dEl, edu.degree)) filled.push(`edu-${idx}-degree`);
-          if (mEl && setNativeValue(mEl, edu.major)) filled.push(`edu-${idx}-major`);
-          if (gEl && setNativeValue(gEl, edu.gpa)) filled.push(`edu-${idx}-gpa`);
+          fillEducationBlock(block, profile.education[idx], filled, `education-${idx + 1}`);
         }
       });
     }
@@ -411,6 +666,26 @@
         field: "company",
         regex: /(current[-_\s]?company|company[-_\s]?name|employer|most[-_\s]?recent[-_\s]?employer|organization)/i,
         val: profile.experience[0].company
+      },
+      {
+        field: "location",
+        regex: /(job[-_\s]?location|^location$)/i,
+        val: profile.experience[0].location || (profile.personal.city + ", " + profile.personal.stateCode)
+      },
+      {
+        field: "fromDate",
+        regex: /(^from\b|start[-_\s]?date)/i,
+        val: formatMMYYYY(profile.experience[0].startMonth, profile.experience[0].startYear)
+      },
+      {
+        field: "toDate",
+        regex: /(^to\b|end[-_\s]?date)/i,
+        val: formatMMYYYY(profile.experience[0].endMonth, profile.experience[0].endYear)
+      },
+      {
+        field: "description",
+        regex: /(role[-_\s]?description|job[-_\s]?description|^description$|responsibilities)/i,
+        val: profile.experience[0].description
       },
       {
         field: "skills",

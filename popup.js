@@ -51,33 +51,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     statusMessage.classList.add("hidden");
 
     try {
-      // 1. Try sending message to content script first
-      chrome.tabs.sendMessage(activeTab.id, { action: "autofill" }, async (response) => {
-        if (chrome.runtime.lastError || !response) {
-          // Content script not ready; execute directly via chrome.scripting
-          try {
-            const results = await chrome.scripting.executeScript({
-              target: { tabId: activeTab.id },
-              func: async (userProfile) => {
-                if (window.JobFillCore) {
-                  return window.JobFillCore.runAutofill(userProfile);
-                }
-                return { success: false, error: "Core engine not loaded" };
-              },
-              args: [profile]
-            });
+      // 1. Re-inject latest scripts to ensure page has latest autofill logic without needing hard refresh
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: activeTab.id },
+          files: ["profile-data.js", "autofill-core.js"]
+        });
+      } catch (e) {
+        console.warn("Script injection note:", e);
+      }
 
-            const res = results && results[0] ? results[0].result : null;
-            handleResult(res);
-          } catch (execErr) {
-            showError("Unable to autofill on this page: " + execErr.message);
+      // 2. Execute autofill directly in the tab
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: activeTab.id },
+        func: (userProfile) => {
+          if (window.JobFillCore) {
+            return window.JobFillCore.runAutofill(userProfile);
           }
+          return { success: false, count: 0, error: "Core engine not loaded" };
+        },
+        args: [profile]
+      });
+
+      const res = results && results[0] ? results[0].result : null;
+      handleResult(res);
+    } catch (err) {
+      // Fallback to sendMessage if scripting fails
+      chrome.tabs.sendMessage(activeTab.id, { action: "autofill" }, (response) => {
+        if (chrome.runtime.lastError || !response) {
+          showError("Unable to autofill on this page: " + err.message);
         } else {
           handleResult(response);
         }
       });
-    } catch (err) {
-      showError(err.message);
     }
   });
 
