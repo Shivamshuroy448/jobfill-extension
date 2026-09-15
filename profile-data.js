@@ -165,11 +165,191 @@ function saveStoredProfile(profile) {
   });
 }
 
+// ==========================================
+// GOOGLE SHEETS & APPLICATION TRACKER MODULE
+// ==========================================
+
+const DEFAULT_TRACKER_SETTINGS = {
+  sheetUrl: "https://docs.google.com/spreadsheets/d/1il6dWqzqRaZQ1fFpsBXPlZcMnh_GO5M1YcRDlKI8nrA/edit?usp=sharing",
+  sheetName: "internship applications",
+  webhookUrl: "",
+  autoSync: true
+};
+
+const DEFAULT_APPLICATIONS = [
+  {
+    id: "app_cardinal_health_2026",
+    company: "Cardinal Health",
+    role: "Data - Analytics Internship - Summer 2027",
+    dateApplied: "09/15/2026",
+    url: "https://cardinalhealth.wd1.myworkdayjobs.com/en-US/EXT/job/OH-Dublin-Cardinal-Place/Data---Analytics-Internship--Summer-2027-_20185913/apply/autofillWithResume",
+    platform: "Workday",
+    status: "Applied",
+    timestamp: 1789516400000,
+    syncedToSheet: false
+  }
+];
+
+function getTrackedApplications() {
+  return new Promise((resolve) => {
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(["trackedApplications"], (result) => {
+        if (result && Array.isArray(result.trackedApplications)) {
+          resolve(result.trackedApplications);
+        } else {
+          chrome.storage.local.set({ trackedApplications: DEFAULT_APPLICATIONS });
+          resolve(DEFAULT_APPLICATIONS);
+        }
+      });
+    } else {
+      resolve(DEFAULT_APPLICATIONS);
+    }
+  });
+}
+
+function saveTrackedApplication(app) {
+  return new Promise(async (resolve) => {
+    const list = await getTrackedApplications();
+    const existingIdx = list.findIndex(item => 
+      (item.url && app.url && item.url === app.url) || 
+      (item.company && app.company && item.company.toLowerCase() === app.company.toLowerCase() && item.dateApplied === app.dateApplied)
+    );
+    
+    const entry = {
+      id: "app_" + Date.now(),
+      status: "Applied",
+      timestamp: Date.now(),
+      syncedToSheet: false,
+      ...app
+    };
+
+    if (existingIdx >= 0) {
+      list[existingIdx] = { ...list[existingIdx], ...entry };
+    } else {
+      list.unshift(entry);
+    }
+    
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ trackedApplications: list }, () => resolve(list));
+    } else {
+      resolve(list);
+    }
+  });
+}
+
+function clearTrackedApplications() {
+  return new Promise((resolve) => {
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ trackedApplications: [] }, () => resolve([]));
+    } else {
+      resolve([]);
+    }
+  });
+}
+
+function getTrackerSettings() {
+  return new Promise((resolve) => {
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(["trackerSettings"], (result) => {
+        if (result && result.trackerSettings) {
+          resolve({ ...DEFAULT_TRACKER_SETTINGS, ...result.trackerSettings });
+        } else {
+          chrome.storage.local.set({ trackerSettings: DEFAULT_TRACKER_SETTINGS });
+          resolve(DEFAULT_TRACKER_SETTINGS);
+        }
+      });
+    } else {
+      resolve(DEFAULT_TRACKER_SETTINGS);
+    }
+  });
+}
+
+function saveTrackerSettings(settings) {
+  return new Promise((resolve) => {
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ trackerSettings: settings }, () => resolve(true));
+    } else {
+      resolve(true);
+    }
+  });
+}
+
+// Generate TSV string for easy copy-paste directly into Google Sheets (splits into columns automatically)
+function formatForGoogleSheets(apps, includeHeaders = false) {
+  const rows = [];
+  if (includeHeaders) {
+    rows.push(["Name of the Company", "Date Applied", "Link of the URL", "Role", "Status"].join("\t"));
+  }
+  apps.forEach(app => {
+    rows.push([
+      app.company || "Unknown",
+      app.dateApplied || "",
+      app.url || "",
+      app.role || "",
+      app.status || "Applied"
+    ].join("\t"));
+  });
+  return rows.join("\n");
+}
+
+// Generate CSV string
+function formatAsCSV(apps) {
+  const escapeCsv = (val) => {
+    const s = String(val || "").replace(/"/g, '""');
+    return `"${s}"`;
+  };
+  const lines = [["Name of the Company", "Date Applied", "Link of the URL", "Role", "Status"].map(escapeCsv).join(",")];
+  apps.forEach(app => {
+    lines.push([
+      app.company || "Unknown",
+      app.dateApplied || "",
+      app.url || "",
+      app.role || "",
+      app.status || "Applied"
+    ].map(escapeCsv).join(","));
+  });
+  return lines.join("\n");
+}
+
+// Post application to Google Apps Script Webhook
+async function syncApplicationToSheet(app, webhookUrl) {
+  if (!webhookUrl) return { success: false, reason: "No webhook URL configured" };
+  try {
+    const payload = {
+      company: app.company,
+      dateApplied: app.dateApplied,
+      url: app.url,
+      role: app.role || "",
+      status: app.status || "Applied",
+      timestamp: new Date().toISOString()
+    };
+    await fetch(webhookUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 // Export for use across scripts
 if (typeof window !== "undefined") {
   window.JobFillProfile = {
     DEFAULT_PROFILE,
+    DEFAULT_TRACKER_SETTINGS,
+    DEFAULT_APPLICATIONS,
     getStoredProfile,
-    saveStoredProfile
+    saveStoredProfile,
+    getTrackedApplications,
+    saveTrackedApplication,
+    clearTrackedApplications,
+    getTrackerSettings,
+    saveTrackerSettings,
+    formatForGoogleSheets,
+    formatAsCSV,
+    syncApplicationToSheet
   };
 }

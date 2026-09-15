@@ -28,6 +28,59 @@
       <div id="status-message" class="status-message hidden"></div>
     </div>
 
+    <!-- Google Sheets Application Tracker Card -->
+    <div class="tracker-card">
+      <div class="tracker-header">
+        <div class="tracker-title-wrap">
+          <span class="tracker-icon">📊</span>
+          <div>
+            <div class="tracker-title">Sheet Tracker</div>
+            <div class="tracker-sheet-name"><a href="https://docs.google.com/spreadsheets/d/1il6dWqzqRaZQ1fFpsBXPlZcMnh_GO5M1YcRDlKI8nrA/edit?usp=sharing" target="_blank" class="sheet-link" title="Open Google Sheet">internship applications &nearr;</a></div>
+          </div>
+        </div>
+        <span id="tracker-sync-status" class="tracker-badge">Auto-Log Ready</span>
+      </div>
+
+      <div class="tracker-detected">
+        <div class="detected-row">
+          <span class="detected-label">Company</span>
+          <span id="detected-company" class="detected-val">Detecting...</span>
+        </div>
+        <div class="detected-row">
+          <span class="detected-label">Date Applied</span>
+          <span id="detected-date" class="detected-val">--/--/----</span>
+        </div>
+        <div class="detected-row">
+          <span class="detected-label">URL</span>
+          <span id="detected-url" class="detected-val url-truncate">--</span>
+        </div>
+      </div>
+
+      <div class="tracker-actions">
+        <button id="btn-copy-sheet-row" class="btn-action" title="Copy row formatted for Google Sheet (splits columns automatically)">
+          <span>📋</span><span>Copy Row for Sheet</span>
+        </button>
+        <a id="btn-open-sheet" href="https://docs.google.com/spreadsheets/d/1il6dWqzqRaZQ1fFpsBXPlZcMnh_GO5M1YcRDlKI8nrA/edit?usp=sharing" target="_blank" class="btn-action-link" title="Open Google Sheet in new tab">
+          <span>↗</span><span>Open Sheet</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Collapsible Tracked Applications History -->
+    <div class="history-card">
+      <div class="history-header" id="history-toggle">
+        <span class="history-title">📑 Tracked History (<span id="history-count">0</span>)</span>
+        <span class="history-arrow" id="history-arrow">▾</span>
+      </div>
+      <div class="history-body hidden" id="history-body">
+        <div id="history-list" class="history-list"></div>
+        <div class="history-actions">
+          <button id="btn-copy-all-tsv" class="btn-ghost" title="Copy all tracked jobs formatted for Google Sheet">📋 Copy All (TSV)</button>
+          <button id="btn-download-csv" class="btn-ghost" title="Download job_applications.csv">📥 Download CSV</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Candidate Profile Card -->
     <div class="profile-card">
       <div class="profile-header">

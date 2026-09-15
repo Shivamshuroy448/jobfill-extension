@@ -248,6 +248,245 @@ body {
   border: 1px solid #334155;
 }
 
+/* Tracker Card */
+.tracker-card {
+  background: #101726;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tracker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tracker-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tracker-icon {
+  font-size: 16px;
+}
+
+.tracker-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.tracker-sheet-name {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.sheet-link {
+  color: #38bdf8;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.sheet-link:hover {
+  text-decoration: underline;
+}
+
+.tracker-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.tracker-detected {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detected-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.detected-label {
+  color: #64748b;
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.detected-val {
+  color: #f1f5f9;
+  font-weight: 500;
+  text-align: right;
+  max-width: 220px;
+}
+
+.url-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: monospace;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.tracker-actions {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 8px;
+}
+
+.btn-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action:hover {
+  background: #0369a1;
+}
+
+.btn-action-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: #1e293b;
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.btn-action-link:hover {
+  background: rgba(56, 189, 248, 0.15);
+}
+
+/* History Card */
+.history-card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.history-header {
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background: #141d2e;
+}
+
+.history-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.history-arrow {
+  font-size: 10px;
+  color: #94a3b8;
+  transition: transform 0.2s;
+}
+
+.history-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-body.hidden {
+  display: none;
+}
+
+.history-list {
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: #1a2234;
+  border-radius: 6px;
+  font-size: 10.5px;
+}
+
+.history-item-company {
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.history-item-date {
+  color: #94a3b8;
+  font-family: monospace;
+  font-size: 10px;
+}
+
+.history-actions {
+  display: flex;
+  gap: 6px;
+  border-top: 1px solid #1f2937;
+  padding-top: 8px;
+}
+
+.btn-ghost {
+  flex: 1;
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-ghost:hover {
+  color: #f1f5f9;
+  border-color: #64748b;
+  background: #1e293b;
+}
+
 /* Footer */
 .footer {
   border-top: 1px solid #1f2937;

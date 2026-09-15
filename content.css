@@ -60,7 +60,6 @@
   letter-spacing: 0.5px;
 }
 
-/* Toast Notification */
 #jobfill-toast {
   position: fixed;
   bottom: 80px;
@@ -78,6 +77,34 @@
   align-items: center;
   gap: 10px;
   animation: jobfillFadeIn 0.3s ease-out forwards;
+}
+
+#jobfill-toast .toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+#jobfill-toast .toast-btn {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+#jobfill-toast .toast-btn:hover {
+  background: #38bdf8;
+  color: #0f172a;
 }
 
 @keyframes jobfillFadeIn {

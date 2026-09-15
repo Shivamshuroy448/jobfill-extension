@@ -158,6 +158,105 @@
       </div>
     </header>
 
+    <!-- Google Sheets Application Tracker & Sync Card -->
+    <div class="card" style="border-color: rgba(56, 189, 248, 0.4);">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <h2 class="card-title" style="border-bottom: none; padding-bottom: 0;">📊 Google Sheets Application Tracker</h2>
+        <a href="https://docs.google.com/spreadsheets/d/1il6dWqzqRaZQ1fFpsBXPlZcMnh_GO5M1YcRDlKI8nrA/edit?usp=sharing" target="_blank" style="color: #38bdf8; font-size: 13px; text-decoration: none; font-weight: 500;">
+          Open Your Google Sheet &nearr;
+        </a>
+      </div>
+      <p style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
+        Every job application you autofill automatically records: <b>Name of the Company</b>, <b>Date Applied</b>, <b>Link of the URL</b>, <b>Role</b>, and <b>Status</b>.
+      </p>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Target Google Sheet URL</label>
+          <input type="text" id="t-sheetUrl" value="https://docs.google.com/spreadsheets/d/1il6dWqzqRaZQ1fFpsBXPlZcMnh_GO5M1YcRDlKI8nrA/edit?usp=sharing">
+        </div>
+        <div class="field">
+          <label>Google Apps Script Webhook URL (Optional for 100% Auto-Sync)</label>
+          <input type="text" id="t-webhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+      </div>
+
+      <!-- Quick Actions for Google Sheets -->
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
+        <button type="button" id="t-btn-copy-tsv" class="btn" style="background: #0284c7; color: white; padding: 8px 14px; font-size: 12px;">
+          📋 Copy All Tracked Rows (TSV for Google Sheets)
+        </button>
+        <button type="button" id="t-btn-download-csv" class="btn" style="background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; padding: 8px 14px; font-size: 12px;">
+          📥 Download CSV
+        </button>
+        <button type="button" id="t-btn-clear" class="btn" style="background: transparent; color: #94a3b8; border: 1px solid #334155; padding: 8px 14px; font-size: 12px;">
+          🗑️ Clear Tracked Applications
+        </button>
+      </div>
+
+      <!-- Apps Script Webhook Instructions Accordion -->
+      <details style="background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; margin-top: 6px;">
+        <summary style="cursor: pointer; font-size: 12px; font-weight: 600; color: #38bdf8; user-select: none;">
+          ⚡ How to enable 100% Automatic Background Sync to your Google Sheet (Takes 30 seconds)
+        </summary>
+        <div style="margin-top: 12px; font-size: 12px; color: #cbd5e1; line-height: 1.6; display: flex; flex-direction: column; gap: 8px;">
+          <p>1. Open your <a href="https://docs.google.com/spreadsheets/d/1il6dWqzqRaZQ1fFpsBXPlZcMnh_GO5M1YcRDlKI8nrA/edit?usp=sharing" target="_blank" style="color: #38bdf8;">Google Sheet</a>.</p>
+          <p>2. In the top menu bar, click <b>Extensions &gt; Apps Script</b>.</p>
+          <p>3. Delete any default code in the editor, and paste this script:</p>
+          <div style="position: relative;">
+            <pre id="apps-script-code" style="background: #020617; border: 1px solid #334155; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; overflow-x: auto; color: #38bdf8;">function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["Name of the Company", "Date Applied", "Link of the URL", "Role", "Status"]);
+    }
+    sheet.appendRow([
+      data.company || "Unknown",
+      data.dateApplied || Utilities.formatDate(new Date(), "GMT-4", "MM/dd/yyyy"),
+      data.url || "",
+      data.role || "",
+      data.status || "Applied"
+    ]);
+    return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+            <button type="button" id="btn-copy-script" style="position: absolute; top: 8px; right: 8px; background: #1e293b; color: #f8fafc; border: 1px solid #475569; border-radius: 4px; padding: 3px 8px; font-size: 10px; cursor: pointer;">
+              Copy Code
+            </button>
+          </div>
+          <p>4. In the Apps Script top-right, click <b>Deploy &gt; New deployment</b>.</p>
+          <p>5. Click the gear icon ⚙️ next to "Select type" &gt; choose <b>Web app</b>.</p>
+          <p>6. Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>. Click <b>Deploy</b>.</p>
+          <p>7. Copy the <b>Web App URL</b> (ends in <code>/exec</code>) and paste it into the Webhook URL field above!</p>
+        </div>
+      </details>
+
+      <!-- Tracked History Table -->
+      <div style="margin-top: 10px;">
+        <div style="font-size: 12px; font-weight: 600; color: #f8fafc; margin-bottom: 8px;">
+          Tracked Applications (<span id="t-app-count">0</span>)
+        </div>
+        <div style="max-height: 180px; overflow-y: auto; border: 1px solid #1f2937; border-radius: 8px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left;">
+            <thead>
+              <tr style="background: #1e293b; color: #94a3b8; border-bottom: 1px solid #334155;">
+                <th style="padding: 8px 10px;">Company</th>
+                <th style="padding: 8px 10px;">Date Applied</th>
+                <th style="padding: 8px 10px;">Role</th>
+                <th style="padding: 8px 10px;">Job Link</th>
+              </tr>
+            </thead>
+            <tbody id="t-app-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Personal Info -->
     <div class="card">
       <h2 class="card-title">👤 Personal Details</h2>

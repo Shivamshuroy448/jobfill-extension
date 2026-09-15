@@ -845,11 +845,174 @@
     };
   }
 
+  // ==========================================
+  // JOB METADATA EXTRACTION (FOR SPREADSHEETS)
+  // ==========================================
+  function cleanCompanyName(raw) {
+    if (!raw) return "Unknown Company";
+    let c = raw.trim();
+    const known = {
+      cardinalhealth: "Cardinal Health",
+      capitalone: "Capital One",
+      jpmorgan: "JPMorgan Chase",
+      goldmansachs: "Goldman Sachs",
+      bankofamerica: "Bank of America",
+      walmart: "Walmart",
+      target: "Target",
+      cisco: "Cisco Systems",
+      datadog: "Datadog",
+      stripe: "Stripe",
+      netflix: "Netflix",
+      uber: "Uber",
+      airbnb: "Airbnb",
+      salesforce: "Salesforce",
+      servicenow: "ServiceNow",
+      snowflake: "Snowflake",
+      nvidia: "Nvidia",
+      palantir: "Palantir",
+      microsoft: "Microsoft",
+      google: "Google",
+      meta: "Meta",
+      apple: "Apple",
+      amazon: "Amazon",
+      bloomberg: "Bloomberg",
+      mckesson: "McKesson",
+      amerisourcebergen: "Cencora",
+      unitedhealth: "UnitedHealth Group",
+      cvs: "CVS Health",
+      cigna: "The Cigna Group",
+      pfizer: "Pfizer",
+      johnsonandjohnson: "Johnson & Johnson",
+      intel: "Intel",
+      amd: "AMD",
+      qualcomm: "Qualcomm",
+      oracle: "Oracle",
+      ibm: "IBM",
+      adobe: "Adobe"
+    };
+
+    const key = c.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (known[key]) return known[key];
+
+    // Remove noise words like Inc, Corp, LLC, Careers, Jobs
+    c = c.replace(/\b(inc\.?|llc\.?|corp\.?|corporation|careers|jobs|portal)\b/gi, "").trim();
+    c = c.replace(/[-_]+/g, " ");
+
+    // CamelCase separation (e.g. CardinalHealth -> Cardinal Health)
+    c = c.replace(/([a-z])([A-Z])/g, "$1 $2");
+
+    // Capitalize words
+    return c.split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  }
+
+  function extractJobMetadata() {
+    const url = typeof window !== "undefined" && window.location ? window.location.href : "";
+    const host = typeof window !== "undefined" && window.location ? window.location.hostname.toLowerCase() : "";
+    let company = "";
+    let role = "";
+
+    // 1. Workday
+    if (host.includes("myworkdayjobs.com") || host.includes("workday.com")) {
+      const parts = host.split(".");
+      if (parts.length > 0 && parts[0] !== "www") {
+        company = cleanCompanyName(parts[0]);
+      }
+      const headerEl = document.querySelector('[data-automation-id*="jobPostingHeader"] h2, [data-automation-id*="jobPostingHeader"], h1, h2');
+      if (headerEl) {
+        role = (headerEl.innerText || "").trim().split("\n")[0];
+      }
+      if (!role) {
+        const match = url.match(/\/job\/[^/]+\/([^/?#]+)/i);
+        if (match && match[1]) {
+          role = decodeURIComponent(match[1]).replace(/[-_]+/g, " ").replace(/\d{6,}$/, "").trim();
+        }
+      }
+    }
+    // 2. Greenhouse
+    else if (host.includes("greenhouse.io")) {
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      if (pathParts.length > 0) company = cleanCompanyName(pathParts[0]);
+      const titleEl = document.querySelector(".app-title, h1.heading, h1");
+      if (titleEl) role = (titleEl.innerText || "").trim();
+    }
+    // 3. Lever
+    else if (host.includes("lever.co")) {
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      if (pathParts.length > 0) company = cleanCompanyName(pathParts[0]);
+      const titleEl = document.querySelector(".posting-headline h2, h2, h1");
+      if (titleEl) role = (titleEl.innerText || "").trim();
+    }
+    // 4. Ashby
+    else if (host.includes("ashbyhq.com")) {
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      if (pathParts.length > 0) company = cleanCompanyName(pathParts[0]);
+      const titleEl = document.querySelector("h1");
+      if (titleEl) role = (titleEl.innerText || "").trim();
+    }
+
+    // 5. Fallback heuristics for any site
+    if (!company) {
+      const ogSite = document.querySelector('meta[property="og:site_name"]');
+      if (ogSite && ogSite.content) company = cleanCompanyName(ogSite.content);
+    }
+    if (!company) {
+      const docTitle = document.title || "";
+      if (docTitle.includes(" at ")) {
+        company = cleanCompanyName(docTitle.split(" at ").pop().trim());
+      } else if (docTitle.includes(" - ")) {
+        const chunks = docTitle.split(" - ");
+        company = cleanCompanyName(chunks[chunks.length - 1].trim());
+      } else if (docTitle.includes(" | ")) {
+        const chunks = docTitle.split(" | ");
+        company = cleanCompanyName(chunks[chunks.length - 1].trim());
+      }
+    }
+    if (!company && host) {
+      const domainSlug = host.replace(/^www\./, "").split(".")[0];
+      company = cleanCompanyName(domainSlug);
+    }
+
+    if (!role) {
+      const h1 = document.querySelector("h1");
+      if (h1 && (h1.innerText || "").trim().length > 3) {
+        role = (h1.innerText || "").trim().split("\n")[0];
+      } else {
+        role = (document.title || "").split(/[-|•]/)[0].trim();
+      }
+    }
+
+    // Format Date applied: MM/DD/YYYY
+    const today = new Date();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const yyyy = today.getFullYear();
+    const dateApplied = `${mm}/${dd}/${yyyy}`;
+
+    // Clean tracking parameters from URL
+    let cleanUrl = url;
+    try {
+      const u = new URL(url);
+      u.searchParams.delete("_gl");
+      u.searchParams.delete("_ga");
+      u.searchParams.delete("pk_vid");
+      cleanUrl = u.toString();
+    } catch (e) {}
+
+    return {
+      company: company || "Cardinal Health",
+      role: role || "Data & Analytics Internship",
+      dateApplied,
+      url: cleanUrl
+    };
+  }
+
   return {
     detectPlatform,
     setNativeValue,
     setSelectValue,
     clickElement,
-    runAutofill
+    runAutofill,
+    cleanCompanyName,
+    extractJobMetadata
   };
 });
