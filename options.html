@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JobFill AI — Profile &amp; Application Settings</title>
+  <style>
+    :root {
+      --bg: #0b0d13;
+      --card-bg: #111827;
+      --border: #1f2937;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #0284c7;
+      --accent: #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 40px 20px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-b: 1px solid var(--border);
+      padding-bottom: 20px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0284c7, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .title { font-size: 20px; font-weight: 700; color: var(--text); }
+    .subtitle { font-size: 13px; color: var(--muted); }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input, select, textarea {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      bottom: 20px;
+      background: rgba(11, 13, 19, 0.9);
+      backdrop-filter: blur(10px);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-save {
+      background: #0284c7;
+      color: white;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    }
+    .btn-save:hover { background: #0369a1; }
+    .btn-reset {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid #334155;
+    }
+    .btn-reset:hover { color: #f87171; border-color: #f87171; }
+    .toast {
+      color: #34d399;
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <div class="logo">⚡</div>
+        <div>
+          <h1 class="title">JobFill AI — Profile Settings</h1>
+          <p class="subtitle">Customize your verified application details for Workday, Greenhouse &amp; Lever</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Personal Info -->
+    <div class="card">
+      <h2 class="card-title">👤 Personal Details</h2>
+      <div class="grid-2">
+        <div class="field">
+          <label>First Name</label>
+          <input type="text" id="p-firstName">
+        </div>
+        <div class="field">
+          <label>Last Name</label>
+          <input type="text" id="p-lastName">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" id="p-email">
+        </div>
+        <div class="field">
+          <label>Phone Number</label>
+          <input type="tel" id="p-phone">
+        </div>
+      </div>
+      <div class="field">
+        <label>Street Address</label>
+        <input type="text" id="p-address">
+      </div>
+      <div class="grid-3">
+        <div class="field">
+          <label>City</label>
+          <input type="text" id="p-city">
+        </div>
+        <div class="field">
+          <label>State</label>
+          <input type="text" id="p-state">
+        </div>
+        <div class="field">
+          <label>Postal / ZIP Code</label>
+          <input type="text" id="p-postal">
+        </div>
+      </div>
+    </div>
+
+    <!-- Web & Social Links -->
+    <div class="card">
+      <h2 class="card-title">🌐 Web &amp; Portfolio Links</h2>
+      <div class="grid-2">
+        <div class="field">
+          <label>Portfolio / Website</label>
+          <input type="url" id="p-website">
+        </div>
+        <div class="field">
+          <label>LinkedIn Profile</label>
+          <input type="url" id="p-linkedin">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>GitHub Profile</label>
+          <input type="url" id="p-github">
+        </div>
+        <div class="field">
+          <label>Medium / Blog</label>
+          <input type="url" id="p-medium">
+        </div>
+      </div>
+    </div>
+
+    <!-- Education -->
+    <div class="card">
+      <h2 class="card-title">🎓 Current Graduate Education</h2>
+      <div class="grid-2">
+        <div class="field">
+          <label>University / School</label>
+          <input type="text" id="p-school">
+        </div>
+        <div class="field">
+          <label>Degree</label>
+          <input type="text" id="p-degree">
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Major / Field of Study</label>
+          <input type="text" id="p-major">
+        </div>
+        <div class="field">
+          <label>GPA</label>
+          <input type="text" id="p-gpa">
+        </div>
+        <div class="field">
+          <label>Graduation Date</label>
+          <input type="text" id="p-gradDate" placeholder="e.g. Dec 2027">
+        </div>
+      </div>
+    </div>
+
+    <!-- Legal & Work Authorization -->
+    <div class="card">
+      <h2 class="card-title">⚖️ Legal &amp; Work Authorization (F-1 Standard)</h2>
+      <div class="grid-2">
+        <div class="field">
+          <label>Legally Authorized to work in US?</label>
+          <select id="p-authUS">
+            <option value="Yes">Yes (Eligible for CPT / OPT)</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Require Visa Sponsorship (Now or Future)?</label>
+          <select id="p-sponsor">
+            <option value="Yes">Yes (Requires H-1B sponsorship)</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save & Reset Action Bar -->
+    <div class="actions">
+      <button id="btn-reset" class="btn btn-reset">↺ Reset to Default</button>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span id="toast" class="toast">✓ Profile Saved Successfully!</span>
+        <button id="btn-save" class="btn btn-save">Save Profile Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="profile-data.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

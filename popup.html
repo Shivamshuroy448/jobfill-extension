@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JobFill AI</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo">⚡</div>
+        <div>
+          <h1 class="title">JobFill AI</h1>
+          <p class="subtitle">Internship &amp; Job Application Autofiller</p>
+        </div>
+      </div>
+      <span id="platform-badge" class="badge">Scanning...</span>
+    </header>
+
+    <!-- Main Action -->
+    <div class="action-section">
+      <button id="btn-autofill" class="btn-primary">
+        <span class="btn-icon">⚡</span>
+        <span class="btn-text">Autofill Application Now</span>
+      </button>
+      <div id="status-message" class="status-message hidden"></div>
+    </div>
+
+    <!-- Candidate Profile Card -->
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="avatar">SR</div>
+        <div class="profile-meta">
+          <h2 id="card-name" class="profile-name">Shivamshu Roy Velamakanni</h2>
+          <p class="profile-program">MS in Data Science &bull; SUNY Buffalo</p>
+        </div>
+      </div>
+
+      <div class="profile-details">
+        <div class="detail-row">
+          <span class="detail-label">Email</span>
+          <span id="card-email" class="detail-value">velamakannishivamshuroy@gmail.com</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Portfolio</span>
+          <a href="https://shivamshuroy.is-a.dev/" target="_blank" class="detail-link">shivamshuroy.is-a.dev &nearr;</a>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Work Auth</span>
+          <span class="detail-value">US Authorized (CPT/OPT) &bull; Needs Sponsorship</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supported Portals List -->
+    <div class="supported-section">
+      <span class="supported-label">Supported ATS Portals:</span>
+      <div class="ats-tags">
+        <span class="ats-tag">Workday</span>
+        <span class="ats-tag">Greenhouse</span>
+        <span class="ats-tag">Lever</span>
+        <span class="ats-tag">Ashby</span>
+        <span class="ats-tag">Universal Forms</span>
+      </div>
+    </div>
+
+    <!-- Footer Links -->
+    <footer class="footer">
+      <a href="#" id="link-options" class="footer-link">⚙️ Edit Profile &amp; Custom Answers</a>
+      <span class="footer-version">v1.0.0</span>
+    </footer>
+  </div>
+
+  <script src="profile-data.js"></script>
+  <script src="autofill-core.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
