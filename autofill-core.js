@@ -176,6 +176,61 @@
       }
     });
 
+    // Work Experience Sections in Workday (Supports sequential mapping for multiple roles)
+    const expBlocks = document.querySelectorAll('[data-automation-id*="workExperienceSection"], [data-automation-id*="WorkExperience"], fieldset[data-automation-id*="experience"]');
+    if (expBlocks && expBlocks.length > 0) {
+      expBlocks.forEach((block, idx) => {
+        if (profile.experience[idx]) {
+          const exp = profile.experience[idx];
+          const tEl = block.querySelector('[data-automation-id*="jobTitle"] input, input[data-automation-id*="jobTitle"], [data-automation-id*="title"] input, input[data-automation-id*="title"]');
+          const cEl = block.querySelector('[data-automation-id*="company"] input, input[data-automation-id*="company"]');
+          const lEl = block.querySelector('[data-automation-id*="location"] input, input[data-automation-id*="location"]');
+          const dEl = block.querySelector('[data-automation-id*="roleDescription"] textarea, textarea[data-automation-id*="roleDescription"], textarea[data-automation-id*="description"]');
+          if (tEl && setNativeValue(tEl, exp.title)) filled.push(`exp-${idx}-title`);
+          if (cEl && setNativeValue(cEl, exp.company)) filled.push(`exp-${idx}-company`);
+          if (lEl && setNativeValue(lEl, exp.location)) filled.push(`exp-${idx}-location`);
+          if (dEl && setNativeValue(dEl, exp.description)) filled.push(`exp-${idx}-desc`);
+        }
+      });
+    } else {
+      // Fallback: Individual experience fields if not grouped into separate section containers
+      const titleInputs = Array.from(document.querySelectorAll('[data-automation-id="jobTitle"], input[data-automation-id="jobTitle"], [data-automation-id*="jobTitle"] input'));
+      const companyInputs = Array.from(document.querySelectorAll('[data-automation-id="company"], input[data-automation-id="company"], [data-automation-id*="company"] input'));
+      const locationInputs = Array.from(document.querySelectorAll('[data-automation-id="location"], input[data-automation-id="location"], [data-automation-id*="location"] input'));
+      const descInputs = Array.from(document.querySelectorAll('textarea[data-automation-id*="roleDescription"], textarea[data-automation-id*="description"], [data-automation-id*="roleDescription"] textarea'));
+
+      titleInputs.forEach((el, i) => {
+        if (profile.experience[i] && setNativeValue(el, profile.experience[i].title)) filled.push(`exp-${i}-title`);
+      });
+      companyInputs.forEach((el, i) => {
+        if (profile.experience[i] && setNativeValue(el, profile.experience[i].company)) filled.push(`exp-${i}-company`);
+      });
+      locationInputs.forEach((el, i) => {
+        if (profile.experience[i] && setNativeValue(el, profile.experience[i].location)) filled.push(`exp-${i}-location`);
+      });
+      descInputs.forEach((el, i) => {
+        if (profile.experience[i] && setNativeValue(el, profile.experience[i].description)) filled.push(`exp-${i}-desc`);
+      });
+    }
+
+    // Education in Workday
+    const eduBlocks = document.querySelectorAll('[data-automation-id*="educationSection"], [data-automation-id*="Education"], fieldset[data-automation-id*="education"]');
+    if (eduBlocks && eduBlocks.length > 0) {
+      eduBlocks.forEach((block, idx) => {
+        if (profile.education[idx]) {
+          const edu = profile.education[idx];
+          const sEl = block.querySelector('[data-automation-id*="school"] input, input[data-automation-id*="school"]');
+          const dEl = block.querySelector('[data-automation-id*="degree"] input, input[data-automation-id*="degree"]');
+          const mEl = block.querySelector('[data-automation-id*="field-of-study"] input, input[data-automation-id*="field-of-study"]');
+          const gEl = block.querySelector('[data-automation-id*="gpa"] input, input[data-automation-id*="gpa"]');
+          if (sEl && setNativeValue(sEl, edu.school)) filled.push(`edu-${idx}-school`);
+          if (dEl && setNativeValue(dEl, edu.degree)) filled.push(`edu-${idx}-degree`);
+          if (mEl && setNativeValue(mEl, edu.major)) filled.push(`edu-${idx}-major`);
+          if (gEl && setNativeValue(gEl, edu.gpa)) filled.push(`edu-${idx}-gpa`);
+        }
+      });
+    }
+
     return filled;
   }
 
@@ -346,6 +401,21 @@
         field: "gpa",
         regex: /(gpa|grade[-_\s]?point)/i,
         val: profile.education[0].gpa
+      },
+      {
+        field: "jobTitle",
+        regex: /(current[-_\s]?title|job[-_\s]?title|most[-_\s]?recent[-_\s]?title|position)/i,
+        val: profile.experience[0].title
+      },
+      {
+        field: "company",
+        regex: /(current[-_\s]?company|company[-_\s]?name|employer|most[-_\s]?recent[-_\s]?employer|organization)/i,
+        val: profile.experience[0].company
+      },
+      {
+        field: "skills",
+        regex: /(skills|key[-_\s]?skills|technical[-_\s]?skills)/i,
+        val: profile.skills.join(", ")
       }
     ];
 

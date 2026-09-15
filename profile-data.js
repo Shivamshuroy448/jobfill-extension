@@ -70,7 +70,7 @@ const DEFAULT_PROFILE = {
       startYear: "2024",
       endMonth: "February",
       endYear: "2026",
-      description: "Architected end-to-end ETL data pipelines using SQL, BigQuery, and Python, automating cross-functional reporting across operational teams and reducing manual data processing latency by 40%. Designed interactive enterprise analytics dashboards querying 500K+ transactional student records; adopted across 4 major business departments, reducing cross-functional reporting turnaround by 35%."
+      description: "Architected end-to-end analytics and automation initiatives using SQL, BigQuery, and Google Apps Script. Engineered executive dashboards and pipelines for admissions, academic, and finance functions to drive operational decisions. Reduced manual data processing latency by 40% across primary databases."
     },
     {
       company: "Tata Consultancy Services (TCS)",
@@ -81,13 +81,41 @@ const DEFAULT_PROFILE = {
       startYear: "2024",
       endMonth: "August",
       endYear: "2024",
-      description: "Developed Python-based automated Exploratory Data Analysis (EDA) pipelines and statistical verification scripts, standardizing data hygiene protocols and decreasing data cleaning and feature preparation time by 30%. Implemented scalable data transformation workflows and BI visualization reports in Tableau."
+      description: "Conducted exploratory data analysis (EDA) and deployed Python & BI automation pipelines. Designed scalable cross-team data visualization reporting dashboards in Tableau, decreasing data cleaning turnaround by 30%."
+    },
+    {
+      company: "National Informatics Center (NIC)",
+      title: "Python Trainee (Intern)",
+      location: "Hyderabad, India",
+      isCurrent: false,
+      startMonth: "February",
+      startYear: "2024",
+      endMonth: "May",
+      endYear: "2024",
+      description: "Contributed to computer vision pipelines identifying, marking, and masking biometric fingerprints in digital documents. Applied advanced image processing techniques with OpenCV and built micro-service APIs using Flask."
+    },
+    {
+      company: "Triyas Tech Solutions",
+      title: "Data Science Intern",
+      location: "Hyderabad, India",
+      isCurrent: false,
+      startMonth: "January",
+      startYear: "2023",
+      endMonth: "May",
+      endYear: "2023",
+      description: "Conducted EDA on large datasets and engineered preprocessing pipelines using Python (Pandas, NumPy) and SQL. Trained and evaluated machine learning models for classification and regression; created interactive reporting dashboards."
     }
   ],
   skills: [
     "Python", "SQL", "R", "Java", "C++", "JavaScript", "PyTorch", "TensorFlow",
     "Scikit-Learn", "Google BigQuery", "PostgreSQL", "MySQL", "Firebase",
     "FastAPI", "Flask", "Docker", "Tableau", "Power BI", "Git/GitHub", "ETL Pipelines"
+  ],
+  certifications: [
+    { name: "Tableau Data Visualization", issuer: "Coursera", link: "https://coursera.org/share/3bb84622ec658e95f722c66225194a72" },
+    { name: "GenAI Essentials", issuer: "Microsoft / LinkedIn", link: "https://drive.google.com/file/d/1RN8UvMLXHYEc2cY8UNno-cy2bpa8Z1-b/view?usp=sharing" },
+    { name: "Python Data Analysis", issuer: "freeCodeCamp", link: "https://freecodecamp.org/certification/fcc2a1a4d57-1b0f-4486-b6ae-b35baacabf79/data-analysis-with-python-v7" },
+    { name: "IBM Data Analyst Capstone", issuer: "Coursera", link: "https://coursera.org/share/7357cb64dcd4a4737ce04362e7d0be19" }
   ],
   legal: {
     authorizedUS: "Yes",
