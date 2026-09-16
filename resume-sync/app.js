@@ -494,69 +494,161 @@ function syncAndOptimizeResume(missingKeywords, jdText) {
   synced.experience = JSON.parse(JSON.stringify(EXACT_BASE_RESUME.experience));
   synced.education = JSON.parse(JSON.stringify(EXACT_BASE_RESUME.education));
 
-  // 1. Languages: EXACT BASE (do not change or reorder): Python, SQL, R, Java, C++, JavaScript, HTML/CSS
+  // 1. Languages: EXACT BASE core set, then reorder + append JD-driven extras
   const langEntry = synced.skills.find(s => s.label === "Languages");
   if (langEntry) {
-    langEntry.value = "Python, SQL, R, Java, C++, JavaScript, HTML/CSS";
+    const baseLangs = ["Python", "SQL", "R", "Java", "C++", "JavaScript", "HTML/CSS"];
     const extraLangs = [];
-    if (/\b(golang|go)\b/i.test(lowerJD) && !langEntry.value.includes("Go")) extraLangs.push("Go");
+    if (/\b(golang|go)\b/i.test(lowerJD) && !baseLangs.includes("Go")) extraLangs.push("Go");
     if (/\brust\b/i.test(lowerJD)) extraLangs.push("Rust");
     if (/\bscala\b/i.test(lowerJD)) extraLangs.push("Scala");
-    if (extraLangs.length > 0) langEntry.value += ", " + extraLangs.join(", ");
+    if (/\btypescript\b/i.test(lowerJD)) extraLangs.push("TypeScript");
+    if (/\bkotlin\b/i.test(lowerJD)) extraLangs.push("Kotlin");
+    if (/\bshell\b|bash\b|scripting/i.test(lowerJD)) extraLangs.push("Shell/Bash");
+    if (/\bmatlab\b/i.test(lowerJD)) extraLangs.push("MATLAB");
+
+    // Reorder: prioritize languages mentioned in JD
+    const reordered = [];
+    const remaining = [...baseLangs];
+    for (const lang of baseLangs) {
+      if (lowerJD.includes(lang.toLowerCase()) || (lang === "SQL" && /\bsql\b/i.test(lowerJD))) {
+        reordered.push(lang);
+        remaining.splice(remaining.indexOf(lang), 1);
+      }
+    }
+    const allLangs = [...reordered, ...remaining, ...extraLangs];
+    langEntry.value = allLangs.join(", ");
   }
 
-  // 2. ML & Deep Learning: EXACT BASE: PyTorch, TensorFlow, Scikit-Learn, Time-Series (Holt-Winters, ARIMA), XGBoost, NLP, LLMs
+  // 2. ML & Deep Learning: EXACT BASE core, reorder by JD relevance + extras
   const mlEntry = synced.skills.find(s => s.label === "ML & Deep Learning");
   if (mlEntry) {
-    mlEntry.value = "PyTorch, TensorFlow, Scikit-Learn, Time-Series (Holt-Winters, ARIMA), XGBoost, NLP, LLMs";
+    const baseML = ["PyTorch", "TensorFlow", "Scikit-Learn", "Time-Series (Holt-Winters, ARIMA)", "XGBoost", "NLP", "LLMs"];
     const extraML = [];
     if (lowerJD.includes("keras")) extraML.push("Keras");
     if (lowerJD.includes("langchain")) extraML.push("LangChain");
-    if (extraML.length > 0) mlEntry.value += ", " + extraML.join(", ");
+    if (lowerJD.includes("hugging face") || lowerJD.includes("transformers") || lowerJD.includes("huggingface")) extraML.push("Hugging Face Transformers");
+    if (lowerJD.includes("opencv") || lowerJD.includes("computer vision")) extraML.push("OpenCV");
+    if (lowerJD.includes("spacy") || lowerJD.includes("spaCy")) extraML.push("spaCy");
+    if (lowerJD.includes("nltk")) extraML.push("NLTK");
+    if (lowerJD.includes("pandas") || lowerJD.includes("numpy")) extraML.push("Pandas/NumPy");
+    if (lowerJD.includes("random forest") || lowerJD.includes("gradient boost") || lowerJD.includes("ensemble")) extraML.push("Ensemble Methods");
+    if (lowerJD.includes("regression") && !lowerJD.includes("logistic")) extraML.push("Regression Analysis");
+    if (lowerJD.includes("classification")) extraML.push("Classification");
+    if (lowerJD.includes("clustering") || lowerJD.includes("k-means")) extraML.push("Clustering");
+    if (lowerJD.includes("recommendation") || lowerJD.includes("collaborative filtering")) extraML.push("Recommender Systems");
+
+    // Reorder: prioritize ML tools mentioned in JD
+    const mlReordered = [];
+    const mlRemaining = [...baseML];
+    for (const item of baseML) {
+      const lcItem = item.toLowerCase();
+      if (lowerJD.includes(lcItem) || 
+          (item === "NLP" && /\bnlp\b/i.test(lowerJD)) ||
+          (item === "LLMs" && /\bllm\b/i.test(lowerJD)) ||
+          (item === "XGBoost" && lowerJD.includes("xgboost")) ||
+          (item === "PyTorch" && lowerJD.includes("pytorch")) ||
+          (item === "TensorFlow" && lowerJD.includes("tensorflow")) ||
+          (item === "Scikit-Learn" && (lowerJD.includes("scikit") || lowerJD.includes("sklearn"))) ||
+          (item.includes("Time-Series") && (lowerJD.includes("time-series") || lowerJD.includes("time series") || lowerJD.includes("forecasting")))) {
+        mlReordered.push(item);
+        mlRemaining.splice(mlRemaining.indexOf(item), 1);
+      }
+    }
+    const allML = [...mlReordered, ...mlRemaining, ...extraML];
+    mlEntry.value = allML.join(", ");
+
+    // Rename label for AI/ML-heavy JDs
+    if (/\bdeep learning\b|\bneural network\b|\bcomputer vision\b|\btransformers?\b/i.test(lowerJD)) {
+      mlEntry.label = "AI & Deep Learning";
+    } else if (/\bmachine learning\b|\bml\b/i.test(lowerJD)) {
+      mlEntry.label = "Machine Learning & AI";
+    }
   }
 
-  // 3. Data & Cloud: EXACT BASE: Google BigQuery, PostgreSQL, MySQL, Firebase, FastAPI, Flask, Docker, ETL Pipelines
+  // 3. Data & Cloud: EXACT BASE core, reorder by JD relevance + extras
   const dataEntry = synced.skills.find(s => s.label === "Data & Cloud");
   if (dataEntry) {
-    dataEntry.value = "Google BigQuery, PostgreSQL, MySQL, Firebase, FastAPI, Flask, Docker, ETL Pipelines";
+    const baseData = ["Google BigQuery", "PostgreSQL", "MySQL", "Firebase", "FastAPI", "Flask", "Docker", "ETL Pipelines"];
     const extraData = [];
-    if (lowerJD.includes("aws")) extraData.push("AWS");
+    if (lowerJD.includes("aws") || lowerJD.includes("amazon web services")) extraData.push("AWS");
+    if (lowerJD.includes("gcp") || lowerJD.includes("google cloud")) extraData.push("GCP");
+    if (lowerJD.includes("azure")) extraData.push("Azure");
     if (lowerJD.includes("snowflake")) extraData.push("Snowflake");
-    if (lowerJD.includes("spark")) extraData.push("Apache Spark");
-    if (extraData.length > 0) dataEntry.value += ", " + extraData.join(", ");
+    if (lowerJD.includes("spark") || lowerJD.includes("pyspark")) extraData.push("Apache Spark");
+    if (lowerJD.includes("kafka")) extraData.push("Apache Kafka");
+    if (lowerJD.includes("airflow")) extraData.push("Apache Airflow");
+    if (lowerJD.includes("dbt")) extraData.push("dbt");
+    if (lowerJD.includes("redis")) extraData.push("Redis");
+    if (lowerJD.includes("mongodb") || lowerJD.includes("nosql")) extraData.push("MongoDB");
+    if (lowerJD.includes("kubernetes") || lowerJD.includes("k8s")) extraData.push("Kubernetes");
+    if (lowerJD.includes("terraform")) extraData.push("Terraform");
+    if (lowerJD.includes("ci/cd") || lowerJD.includes("cicd")) extraData.push("CI/CD");
+    if (lowerJD.includes("rest api") || lowerJD.includes("restful")) extraData.push("REST APIs");
+    if (lowerJD.includes("graphql")) extraData.push("GraphQL");
+
+    // Reorder: prioritize tools mentioned in JD
+    const dataReordered = [];
+    const dataRemaining = [...baseData];
+    for (const item of baseData) {
+      const lcItem = item.toLowerCase();
+      if (lowerJD.includes(lcItem) ||
+          (item === "Google BigQuery" && (lowerJD.includes("bigquery") || lowerJD.includes("big query"))) ||
+          (item === "PostgreSQL" && (lowerJD.includes("postgresql") || lowerJD.includes("postgres"))) ||
+          (item === "FastAPI" && lowerJD.includes("fastapi")) ||
+          (item === "Docker" && lowerJD.includes("docker")) ||
+          (item === "ETL Pipelines" && (lowerJD.includes("etl") || lowerJD.includes("pipeline")))) {
+        dataReordered.push(item);
+        dataRemaining.splice(dataRemaining.indexOf(item), 1);
+      }
+    }
+    const allData = [...dataReordered, ...dataRemaining, ...extraData];
+    dataEntry.value = allData.join(", ");
+
+    // Rename label for cloud-heavy JDs
+    if (/\baws\b|\bgcp\b|\bazure\b|\bcloud\b/i.test(lowerJD)) {
+      dataEntry.label = "Data, Cloud & Infrastructure";
+    }
   }
 
-  // 4. Analytics & Tools: EXACT BASE: Tableau, Power BI, Statistical Modeling, EDA, Git/GitHub, Linux/Bash, Jupyter
-  // Append extras only if needed by JD
+  // 4. Analytics & Tools: EXACT BASE core, reorder by JD + extras
   const toolsEntry = synced.skills.find(s => s.label === "Analytics & Tools");
   if (toolsEntry) {
-    toolsEntry.value = "Tableau, Power BI, Statistical Modeling, EDA, Git/GitHub, Linux/Bash, Jupyter";
+    const baseTools = ["Tableau", "Power BI", "Statistical Modeling", "EDA", "Git/GitHub", "Linux/Bash", "Jupyter"];
     const extraTools = [];
     const hasStatMethods = lowerJD.includes("statistical methods") || lowerJD.includes("statistical");
     const hasDataAnalysis = lowerJD.includes("data analysis") || lowerJD.includes("data analysis techniques");
     const hasDataViz = lowerJD.includes("data visualization") || lowerJD.includes("visualization");
 
-    if (hasStatMethods && !toolsEntry.value.toLowerCase().includes("statistical methods")) {
-      extraTools.push("Statistical Methods");
+    if (hasStatMethods) extraTools.push("Statistical Methods");
+    if (hasDataAnalysis) extraTools.push("Data Analysis Techniques");
+    if (hasDataViz) extraTools.push("Data Visualization");
+    if (lowerJD.includes("imputation") || lowerJD.includes("hygiene")) extraTools.push("Data Imputation Protocols");
+    if (lowerJD.includes("hipaa")) extraTools.push("HIPAA Privacy Protocols");
+    if (lowerJD.includes("harmonization") || lowerJD.includes("bioinformatics") || lowerJD.includes("genomic")) extraTools.push("Data Harmonization");
+    if (lowerJD.includes("excel") || lowerJD.includes("spreadsheet")) extraTools.push("Excel/Sheets");
+    if (lowerJD.includes("looker")) extraTools.push("Looker");
+    if (lowerJD.includes("matplotlib") || lowerJD.includes("seaborn") || lowerJD.includes("plotly")) extraTools.push("Matplotlib/Seaborn");
+    if (lowerJD.includes("jira") || lowerJD.includes("confluence")) extraTools.push("Jira/Confluence");
+    if (lowerJD.includes("a/b test")) extraTools.push("A/B Testing");
+
+    // Reorder: prioritize tools mentioned in JD
+    const toolsReordered = [];
+    const toolsRemaining = [...baseTools];
+    for (const item of baseTools) {
+      const lcItem = item.toLowerCase();
+      if (lowerJD.includes(lcItem) ||
+          (item === "Power BI" && lowerJD.includes("power bi")) ||
+          (item === "Tableau" && lowerJD.includes("tableau")) ||
+          (item === "Statistical Modeling" && (lowerJD.includes("statistical") || lowerJD.includes("modeling"))) ||
+          (item === "EDA" && (lowerJD.includes("eda") || lowerJD.includes("exploratory"))) ||
+          (item === "Git/GitHub" && (lowerJD.includes("git") || lowerJD.includes("version control")))) {
+        toolsReordered.push(item);
+        toolsRemaining.splice(toolsRemaining.indexOf(item), 1);
+      }
     }
-    if (hasDataAnalysis && !toolsEntry.value.toLowerCase().includes("data analysis")) {
-      extraTools.push("Data Analysis Techniques");
-    }
-    if (hasDataViz && !toolsEntry.value.toLowerCase().includes("data visualization")) {
-      extraTools.push("Data Visualization");
-    }
-    if (lowerJD.includes("imputation") || lowerJD.includes("hygiene")) {
-      extraTools.push("Data Imputation Protocols");
-    }
-    if (lowerJD.includes("hipaa")) {
-      extraTools.push("HIPAA Privacy Protocols");
-    }
-    if (lowerJD.includes("harmonization") || lowerJD.includes("bioinformatics") || lowerJD.includes("genomic")) {
-      extraTools.push("Data Harmonization");
-    }
-    if (extraTools.length > 0) {
-      toolsEntry.value += ", " + extraTools.join(", ");
-    }
+    const allTools = [...toolsReordered, ...toolsRemaining, ...extraTools];
+    toolsEntry.value = allTools.join(", ");
   }
 
   // 5. Relevant Coursework: EXACT BASE: Data Structures & Algorithms, Object-Oriented Programming, Database Management Systems
@@ -1104,7 +1196,12 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
     } catch (e) {}
   }
 
-  // 3. Send message to Chrome Extension with ACK handshake
+  // 3. IMMEDIATELY open Overleaf in the user click context (avoids popup blockers)
+  //    The extension will also focus/create a tab, but this guarantees it opens.
+  const overleafUrl = "https://www.overleaf.com/project/69787f4c07ea46326eb8587e";
+  const overleafWindow = window.open(overleafUrl, "overleaf_sync_tab");
+
+  // 4. Send message to Chrome Extension with ACK handshake
   let extensionConnected = false;
   let extensionHandled = false;
 
@@ -1122,46 +1219,45 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
     window.addEventListener("message", handler);
     window.postMessage({ type: "RESUMESYNC_TO_OVERLEAF", latex: fullLatex }, "*");
 
-    // Check if extension acknowledged within 2500ms.
+    // Check if extension acknowledged within 3000ms.
     setTimeout(() => {
       if (!extensionConnected) {
         window.removeEventListener("message", handler);
         resolve(false);
       }
-    }, 2500);
+    }, 3000);
 
     // Hard timeout for extension injection
     setTimeout(() => {
       window.removeEventListener("message", handler);
       resolve(false);
-    }, 8000);
+    }, 12000);
   });
 
   extensionHandled = await extPromise;
 
-  // 4. If extension didn't handle it, open Overleaf tab directly in browser
-  if (!extensionHandled) {
-    window.open("https://www.overleaf.com/project/69787f4c07ea46326eb8587e", "_blank");
-    showToastFeedback(
-      `📋 <strong>Tailored LaTeX Copied to Clipboard!</strong><br>` +
-      `In Overleaf: Press <strong>Cmd+A</strong> then <strong>Cmd+V</strong> to paste, then click <strong>Recompile</strong>.`,
-      8000
-    );
-  } else {
+  // 5. Show appropriate feedback
+  if (extensionHandled) {
     showToastFeedback(
       `✓ <strong>LaTeX Code Injected & Recompiled in Overleaf!</strong><br>` +
       `Check your Overleaf tab to preview the compiled PDF.`,
       6000
     );
+  } else {
+    showToastFeedback(
+      `📋 <strong>Tailored LaTeX Copied to Clipboard!</strong><br>` +
+      `Overleaf tab opened — Press <strong>Cmd+A</strong> then <strong>Cmd+V</strong> to paste, then click <strong>Recompile</strong>.`,
+      8000
+    );
   }
 
-  // 5. Update Button Feedback
+  // 6. Update Button Feedback
   const btnMain = document.getElementById("btn-sync-overleaf-main");
   const btnTop = document.getElementById("btn-sync-overleaf-top");
 
   const successMsg = extensionHandled
     ? "✓ Injected & Recompiled in Overleaf!"
-    : "✓ LaTeX Copied! Switched to Overleaf";
+    : "✓ LaTeX Copied! Overleaf Opened";
 
   if (btnMain) {
     const orig = btnMain.innerHTML;
@@ -1196,42 +1292,64 @@ async function downloadResumePDF() {
   const companyInput = document.getElementById("company-input");
   const companyName = (companyInput ? companyInput.value.trim() : "") || "General";
 
-  // 1. Listen for extension download confirmation
+  // 0. Make sure we have latest tailored LaTeX on clipboard for manual paste fallback
+  const fullLatex = generateLaTeX(activeResume);
+  try {
+    await navigator.clipboard.writeText(fullLatex);
+  } catch (e) {}
+
+  // 1. IMMEDIATELY open Overleaf in user click context (avoids popup blockers)
+  const overleafUrl = "https://www.overleaf.com/project/69787f4c07ea46326eb8587e";
+  const overleafWindow = window.open(overleafUrl, "overleaf_sync_tab");
+
+  // 2. Listen for extension download confirmation
   let handledByExtension = false;
-  const downloadHandler = (e) => {
-    if (e.data && e.data.type === "RESUMESYNC_DOWNLOAD_RESULT") {
-      handledByExtension = true;
-      window.removeEventListener("message", downloadHandler);
-      showToastFeedback(`📥 <strong>Downloading PDF from Overleaf!</strong><br>Check your Downloads folder for <code>roy.pdf</code>.`);
-      setBtnText(`<span>✓</span><span>PDF Downloaded!</span>`);
-    }
-  };
-  window.addEventListener("message", downloadHandler);
+  const downloadPromise = new Promise((resolve) => {
+    const downloadHandler = (e) => {
+      if (e.data && e.data.type === "RESUMESYNC_DOWNLOAD_RESULT") {
+        handledByExtension = true;
+        window.removeEventListener("message", downloadHandler);
+        resolve(true);
+      }
+    };
+    window.addEventListener("message", downloadHandler);
 
-  // 2. Trigger Overleaf PDF download via extension relay
-  window.postMessage({ type: "RESUMESYNC_DOWNLOAD_PDF" }, "*");
+    // Trigger Overleaf PDF download via extension relay
+    window.postMessage({ type: "RESUMESYNC_DOWNLOAD_PDF" }, "*");
 
-  // 3. Fallback: If extension is not active or Overleaf tab is closed
-  setTimeout(() => {
-    window.removeEventListener("message", downloadHandler);
-    if (!handledByExtension) {
-      // Open Overleaf tab directly so user can download
-      setBtnText(`<span>📥</span><span>Opening Overleaf...</span>`);
-      showToastFeedback(
-        `📄 <strong>Overleaf Tab Not Detected</strong><br>` +
-        `Opening Overleaf project to compile and download your resume PDF...`,
-        6000
-      );
-      window.open("https://www.overleaf.com/project/69787f4c07ea46326eb8587e", "_blank");
-    }
+    // Timeout fallback
     setTimeout(() => {
-      if (btnMain) btnMain.innerHTML = origMain;
-      if (btnTop) btnTop.innerHTML = origTop;
-    }, 3500);
-  }, 2000);
+      window.removeEventListener("message", downloadHandler);
+      resolve(false);
+    }, 5000);
+  });
+
+  handledByExtension = await downloadPromise;
+
+  // 3. Show feedback
+  if (handledByExtension) {
+    showToastFeedback(`📥 <strong>Downloading PDF from Overleaf!</strong><br>Check your Downloads folder for <code>roy.pdf</code>.`);
+    setBtnText(`<span>✓</span><span>PDF Downloaded!</span>`);
+  } else {
+    // Also download .tex file as a reliable fallback
+    downloadTexFile();
+    showToastFeedback(
+      `📄 <strong>Overleaf opened + .tex file downloaded!</strong><br>` +
+      `In Overleaf: Paste <strong>Cmd+A → Cmd+V</strong>, click <strong>Recompile</strong>, then click the <strong>Download PDF</strong> button.`,
+      8000
+    );
+    setBtnText(`<span>📥</span><span>Overleaf Opened + .tex Downloaded</span>`);
+  }
+
+  setTimeout(() => {
+    if (btnMain) btnMain.innerHTML = origMain;
+    if (btnTop) btnTop.innerHTML = origTop;
+  }, 4000);
 
   saveTargetCompany(companyName);
 }
+
+
 
 // Function to download .tex source file directly
 function downloadTexFile() {
