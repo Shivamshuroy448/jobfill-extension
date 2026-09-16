@@ -168,6 +168,27 @@ jobfill-extension/
 
 ---
 
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+
+1. **Fork the Repository** on GitHub.
+2. **Create a Feature Branch**:
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. **Commit Your Changes**:
+   ```bash
+   git commit -m "feat: add amazing feature"
+   ```
+4. **Push to Branch**:
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+5. **Open a Pull Request** against `main`.
+
+---
+
 ## 📄 License
 
 Distributed under the MIT License.
