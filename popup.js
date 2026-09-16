@@ -304,10 +304,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (linkResumeSync) {
     linkResumeSync.addEventListener("click", (e) => {
       e.preventDefault();
-      if (chrome.tabs && chrome.tabs.create) {
-        chrome.tabs.create({ url: "file:///Users/roy/projects/resume-sync/index.html" });
+      const targetUrl = (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL)
+        ? chrome.runtime.getURL("resume-sync/index.html")
+        : "file:///Users/roy/projects/resume-sync/index.html";
+      if (typeof chrome !== "undefined" && chrome.tabs && chrome.tabs.create) {
+        chrome.tabs.create({ url: targetUrl });
       } else {
-        window.open("file:///Users/roy/projects/resume-sync/index.html", "_blank");
+        window.open(targetUrl, "_blank");
       }
     });
   }

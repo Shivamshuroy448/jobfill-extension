@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResumeSync AI — Instant ATS Keyword Matcher & Overleaf Sync</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Client-side PDF and DOCX parsers for instant JD file upload -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script>
+    if (typeof pdfjsLib !== "undefined") {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+  </script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navbar -->
+    <header class="navbar">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <h1 class="brand-title">ResumeSync AI</h1>
+          <p class="brand-sub">Instant ATS Keyword Matcher &amp; Real-Time Overleaf Sync</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div id="nav-company-pill" class="nav-company-pill" title="Target employer folder">
+          <span class="nav-pill-icon">🏢</span>
+          <span class="nav-pill-label">Company:</span>
+          <strong id="nav-company-name">General</strong>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="workspace">
+      <!-- Left Panel: Job Description & Analysis -->
+      <section class="panel panel-left">
+        <!-- Dedicated Target Company & Folder Card -->
+        <div class="panel-card company-card">
+          <div class="card-header">
+            <div class="card-title-wrap">
+              <span class="card-icon">🏢</span>
+              <h2 class="card-title">Target Company &amp; Folder</h2>
+            </div>
+            <span id="company-status-badge" class="company-badge-pill">📁 Ready</span>
+          </div>
+          <p class="card-instruction">Specify the employer name to auto-create and save files in <span class="path-highlight">Desktop/resumes/&lt;Company&gt;/</span>.</p>
+
+          <div class="company-field-container">
+            <div class="company-field-row">
+              <span class="company-field-icon">🏢</span>
+              <input type="text" id="company-input" class="company-field-input" placeholder="e.g. Amazon, Google, Meta, Bloomberg..." autocomplete="off">
+              <button id="btn-clear-company" class="btn-clear-company" title="Clear company" style="display: none;">✕</button>
+              <span id="company-detect-badge" class="company-detect-badge">Auto-detected</span>
+            </div>
+            
+            <div class="folder-destination-bar">
+              <div class="folder-dest-info">
+                <span class="dest-icon">📁</span>
+                <span class="dest-label">Folder:</span>
+                <span id="dest-folder-display" class="dest-path">Desktop/resumes/<strong id="dest-company-name">General</strong>/</span>
+              </div>
+              <button id="btn-open-folder" class="btn-open-folder" title="Open folder in macOS Finder">
+                <span>📂 Open in Finder</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Select Company Chips -->
+          <div class="quick-companies">
+            <span class="quick-label">Popular companies:</span>
+            <div class="company-chips-row">
+              <button type="button" class="company-chip" data-company="Amazon">Amazon</button>
+              <button type="button" class="company-chip" data-company="Google">Google</button>
+              <button type="button" class="company-chip" data-company="Meta">Meta</button>
+              <button type="button" class="company-chip" data-company="Microsoft">Microsoft</button>
+              <button type="button" class="company-chip" data-company="Cardinal Health">Cardinal Health</button>
+              <button type="button" class="company-chip" data-company="CVS Health">CVS Health</button>
+              <button type="button" class="company-chip" data-company="Bloomberg">Bloomberg</button>
+              <button type="button" class="company-chip" data-company="Capital One">Capital One</button>
+              <button type="button" class="company-chip" data-company="Apple">Apple</button>
+              <button type="button" class="company-chip" data-company="Stripe">Stripe</button>
+            </div>
+          </div>
+
+          <!-- Existing Desktop Folders -->
+          <div id="existing-folders-section" class="existing-folders-section" style="display: none;">
+            <span class="quick-label">Your existing folders:</span>
+            <div id="existing-folders-list" class="company-chips-row"></div>
+          </div>
+        </div>
+
+        <!-- Job Description Card -->
+        <div class="panel-card">
+          <div class="card-header">
+            <div class="card-title-wrap">
+              <span class="card-icon">🎯</span>
+              <h2 class="card-title">Job Description</h2>
+              <span id="role-detected-pill" class="role-detected-pill" style="display: none;" title="Target Role & Status">
+                <span class="mini-pulse"></span>
+                <span id="role-detected-text"></span>
+              </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button id="btn-load-example" class="btn-text" title="Cycle through sample job descriptions">📋 Sample JD</button>
+              <label for="jd-file-input" class="btn-upload-label" title="Upload PDF, Word (DOCX), or Text file">
+                <span>📁 Upload JD</span>
+                <input type="file" id="jd-file-input" accept=".pdf,.docx,.doc,.txt,.md" style="display: none;">
+              </label>
+              <button id="btn-clear-jd" class="btn-text">Clear</button>
+            </div>
+          </div>
+          <p class="card-instruction">Paste or drop a job description (.pdf, .docx, .txt) below. Analysis updates instantly.</p>
+
+          <textarea id="jd-input" placeholder="Paste or drag-and-drop a job description (.pdf, .docx, .txt) here..."></textarea>
+          
+          <div class="sync-banner">
+            <button id="btn-sync-overleaf-main" class="btn btn-sync" title="1-Click sync tailored skills & projects and recompile in Overleaf">
+              <span class="sync-icon">⚡</span>
+              <span>1-Click Sync &amp; Recompile to Overleaf</span>
+            </button>
+            <button id="btn-download-resume-main" class="btn btn-download" title="Download tailored PDF">
+              <span>📥 Download PDF</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ATS Match & Keyword Breakdown -->
+        <div class="panel-card match-card">
+          <div class="card-header">
+            <div class="card-title-wrap">
+              <span class="card-icon">📊</span>
+              <h2 class="card-title">ATS Keyword Match Analysis</h2>
+            </div>
+            <span id="match-score-badge" class="score-badge">0% Match</span>
+          </div>
+
+          <div class="score-container">
+            <div class="score-bar-bg">
+              <div id="score-bar-fill" class="score-bar-fill" style="width: 0%"></div>
+            </div>
+            <div class="score-stats">
+              <span id="matched-count">0 keywords matched</span>
+              <span id="missing-count">0 keywords missing</span>
+            </div>
+          </div>
+
+          <!-- Keyword Badges Sections -->
+          <div class="keywords-group">
+            <h3 class="keywords-heading text-red">⚠️ Missing / Recommended Keywords:</h3>
+            <div id="missing-keywords-list" class="keywords-list">
+              <span class="empty-hint">Paste a job description above to detect missing keywords.</span>
+            </div>
+          </div>
+
+          <div class="keywords-group">
+            <h3 class="keywords-heading text-green">✅ Matched Keywords in Resume:</h3>
+            <div id="matched-keywords-list" class="keywords-list">
+              <span class="empty-hint">Waiting for job description...</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Direct LaTeX Code View -->
+      <section class="panel panel-right">
+        <div class="latex-toolbar">
+          <div class="latex-title-wrap">
+            <span class="latex-badge">LATEX</span>
+            <span class="latex-filename">roy.tex (resume.cls)</span>
+            <span id="overleaf-status-pill" class="status-pill ready">⚡ Overleaf Sync Ready</span>
+          </div>
+          <div class="toolbar-actions">
+            <button id="btn-download-tex" class="btn btn-small btn-secondary">💾 Save .tex</button>
+            <button id="btn-copy-latex" class="btn btn-small btn-primary">📋 Copy All LaTeX</button>
+            <button id="btn-copy-skills" class="btn btn-small btn-secondary">📋 Copy Skills Block Only</button>
+            <button id="btn-reset-resume" class="btn btn-small btn-secondary">🔄 Reset Original</button>
+          </div>
+        </div>
+
+        <!-- Direct LaTeX Editor Area -->
+        <div class="latex-editor-container">
+          <textarea id="latex-output" spellcheck="false" class="code-editor"></textarea>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
