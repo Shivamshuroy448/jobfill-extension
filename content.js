@@ -423,20 +423,40 @@
   // ResumeSync AI -> Overleaf Bridge Relay
   window.addEventListener("message", (event) => {
     if (event.data && event.data.type === "RESUMESYNC_TO_OVERLEAF") {
-      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage({
-          action: "INJECT_INTO_OVERLEAF",
-          latex: event.data.latex
-        }, (res) => {
-          window.postMessage({ type: "RESUMESYNC_RESULT", result: res }, "*");
-        });
+      try {
+        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+          // Send instant ACK to ResumeSync so it knows the extension is active
+          window.postMessage({ type: "RESUMESYNC_ACK", message: "JobFill Extension connected. Syncing to Overleaf..." }, "*");
+
+          chrome.runtime.sendMessage({
+            action: "INJECT_INTO_OVERLEAF",
+            latex: event.data.latex
+          }, (res) => {
+            const lastErr = chrome.runtime.lastError;
+            if (lastErr) {
+              console.warn("Overleaf injection runtime error:", lastErr);
+              window.postMessage({ type: "RESUMESYNC_RESULT", result: { success: false, error: lastErr.message } }, "*");
+            } else {
+              window.postMessage({ type: "RESUMESYNC_RESULT", result: res }, "*");
+            }
+          });
+        } else {
+          window.postMessage({ type: "RESUMESYNC_RESULT", result: { success: false, error: "Chrome runtime unavailable" } }, "*");
+        }
+      } catch (e) {
+        console.warn("Failed to communicate with background:", e);
+        window.postMessage({ type: "RESUMESYNC_RESULT", result: { success: false, error: e.toString() } }, "*");
       }
     }
     if (event.data && event.data.type === "RESUMESYNC_DOWNLOAD_PDF") {
-      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage({ action: "DOWNLOAD_OVERLEAF_PDF" }, (res) => {
-          window.postMessage({ type: "RESUMESYNC_DOWNLOAD_RESULT", result: res }, "*");
-        });
+      try {
+        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({ action: "DOWNLOAD_OVERLEAF_PDF" }, (res) => {
+            window.postMessage({ type: "RESUMESYNC_DOWNLOAD_RESULT", result: res }, "*");
+          });
+        }
+      } catch (e) {
+        window.postMessage({ type: "RESUMESYNC_DOWNLOAD_RESULT", result: { success: false, error: e.toString() } }, "*");
       }
     }
   });
