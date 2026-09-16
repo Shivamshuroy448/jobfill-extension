@@ -12,7 +12,10 @@
                        url.includes("lever.co") ||
                        url.includes("ashbyhq.com") ||
                        url.includes("smartrecruiters.com") ||
-                       url.includes("icims.com");
+                       url.includes("icims.com") ||
+                       url.includes("tiktok.com") ||
+                       url.includes("bytedance.com") ||
+                       url.includes("feishu.cn");
 
     if (isKnownATS) return true;
 

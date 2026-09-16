@@ -66,6 +66,7 @@ const DEFAULT_PROFILE = {
       title: "Data Scientist",
       location: "Hyderabad, India",
       isCurrent: false,
+      isInternship: false,
       startMonth: "December",
       startYear: "2024",
       endMonth: "February",
@@ -77,6 +78,7 @@ const DEFAULT_PROFILE = {
       title: "Data Science Intern",
       location: "Hyderabad, India",
       isCurrent: false,
+      isInternship: true,
       startMonth: "May",
       startYear: "2024",
       endMonth: "August",
@@ -88,6 +90,7 @@ const DEFAULT_PROFILE = {
       title: "Python Trainee (Intern)",
       location: "Hyderabad, India",
       isCurrent: false,
+      isInternship: true,
       startMonth: "February",
       startYear: "2024",
       endMonth: "May",
@@ -99,6 +102,7 @@ const DEFAULT_PROFILE = {
       title: "Data Science Intern",
       location: "Hyderabad, India",
       isCurrent: false,
+      isInternship: true,
       startMonth: "January",
       startYear: "2023",
       endMonth: "May",
@@ -140,7 +144,23 @@ function getStoredProfile() {
     if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(["userProfile"], (result) => {
         if (result && result.userProfile) {
-          resolve(result.userProfile);
+          const p = result.userProfile;
+          // Ensure all 4 verified experiences are available
+          if (!p.experience || p.experience.length < 4) {
+            p.experience = DEFAULT_PROFILE.experience;
+          } else {
+            p.experience.forEach(exp => {
+              if (exp.isInternship === undefined) {
+                const def = DEFAULT_PROFILE.experience.find(d => 
+                  d.company.toLowerCase().includes(exp.company.toLowerCase()) || 
+                  exp.company.toLowerCase().includes(d.company.toLowerCase())
+                );
+                exp.isInternship = def ? def.isInternship : /intern/i.test(exp.title || "");
+              }
+            });
+          }
+          chrome.storage.local.set({ userProfile: p });
+          resolve(p);
         } else {
           // Initialize with default
           chrome.storage.local.set({ userProfile: DEFAULT_PROFILE });

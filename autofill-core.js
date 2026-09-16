@@ -78,13 +78,14 @@
 
   // Detect current platform
   function detectPlatform() {
-    const host = window.location.hostname.toLowerCase();
+    const host = (typeof window !== "undefined" && window.location && window.location.hostname ? window.location.hostname : "").toLowerCase();
     if (host.includes("myworkdayjobs.com") || host.includes("workday.com")) return "Workday";
     if (host.includes("greenhouse.io")) return "Greenhouse";
     if (host.includes("lever.co")) return "Lever";
     if (host.includes("ashbyhq.com")) return "Ashby";
     if (host.includes("smartrecruiters.com")) return "SmartRecruiters";
     if (host.includes("icims.com")) return "iCIMS";
+    if (host.includes("tiktok.com") || host.includes("bytedance.com") || host.includes("feishu.cn")) return "TikTok";
     return "Universal";
   }
 
@@ -117,6 +118,28 @@
     return `${mm}/${yearStr.trim()}`;
   }
 
+  // Format month and year to YYYY - MM or YYYY-MM
+  function formatYYYYMM(monthStr, yearStr, separator = " - ") {
+    if (!yearStr) return "";
+    const monthMap = {
+      january: "01", jan: "01", "1": "01", "01": "01",
+      february: "02", feb: "02", "2": "02", "02": "02",
+      march: "03", mar: "03", "3": "03", "03": "03",
+      april: "04", apr: "04", "4": "04", "04": "04",
+      may: "05", "5": "05", "05": "05",
+      june: "06", jun: "06", "6": "06", "06": "06",
+      july: "07", jul: "07", "7": "07", "07": "07",
+      august: "08", aug: "08", "8": "08", "08": "08",
+      september: "09", sep: "09", sept: "09", "9": "09", "09": "09",
+      october: "10", oct: "10", "10": "10",
+      november: "11", nov: "11", "11": "11",
+      december: "12", dec: "12", "12": "12"
+    };
+    const m = (monthStr || "").toLowerCase().trim();
+    const mm = monthMap[m] || "01";
+    return `${yearStr.trim()}${separator}${mm}`;
+  }
+
   // Helper: query selector with multiple fallback patterns
   function findField(selectors) {
     for (const sel of selectors) {
@@ -145,14 +168,7 @@
         const nested = lbl.querySelector("input:not([type='hidden']), textarea, select");
         if (nested && isFillable(nested)) return nested;
 
-        // Method C: Parent or wrapper container input
-        const wrapper = lbl.closest("div, fieldset, li, td");
-        if (wrapper) {
-          const candidate = wrapper.querySelector("input:not([type='hidden']), textarea, select");
-          if (candidate && isFillable(candidate)) return candidate;
-        }
-
-        // Method D: Next element sibling
+        // Method C: Next element sibling (direct neighbor)
         let sibling = lbl.nextElementSibling;
         while (sibling) {
           if (sibling.matches && sibling.matches("input:not([type='hidden']), textarea, select") && isFillable(sibling)) {
@@ -160,7 +176,16 @@
           }
           const nestedSib = sibling.querySelector && sibling.querySelector("input:not([type='hidden']), textarea, select");
           if (nestedSib && isFillable(nestedSib)) return nestedSib;
+          // If sibling is another label, stop looking further down siblings
+          if (sibling.matches && sibling.matches("label, [class*='label' i]")) break;
           sibling = sibling.nextElementSibling;
+        }
+
+        // Method D: Specific parent or field wrapper container (avoiding the entire section card)
+        const wrapper = lbl.closest("div[class*='field' i], div[class*='item' i], div[class*='group' i], div[class*='row' i], div[class*='control' i], li, td");
+        if (wrapper && wrapper !== container) {
+          const candidate = wrapper.querySelector("input:not([type='hidden']), textarea, select");
+          if (candidate && isFillable(candidate)) return candidate;
         }
       }
     }
@@ -661,13 +686,433 @@
   }
 
   // ==========================================
-  // 5. UNIVERSAL HEURISTIC MATCHER
+  // 5. TIKTOK / BYTEDANCE ADAPTER & MULTI-CARD HELPERS
+  // ==========================================
+
+  // Helper: check if a container or card is inside an "Internship" section
+  function isInsideInternshipSection(container) {
+    if (!container) return false;
+    let curr = container;
+    while (curr && curr !== document.body) {
+      const headings = Array.from(curr.querySelectorAll("h1, h2, h3, h4, h5, h6, legend, [class*='title' i], [class*='header' i]"));
+      const headingTexts = headings.map(h => (h.innerText || h.textContent || "").trim()).filter(Boolean);
+
+      const hasIntern = headingTexts.some(t => /internship/i.test(t));
+      const hasWork = headingTexts.some(t => /(work\s*experience|employment|professional\s*experience)/i.test(t));
+
+      if (hasIntern && !hasWork) return true;
+      if (hasWork && !hasIntern) return false;
+      if (hasIntern && hasWork) {
+        const cRect = container.getBoundingClientRect();
+        let closestDist = Infinity;
+        let isClosestIntern = false;
+        headings.forEach(h => {
+          const t = (h.innerText || "").trim();
+          const r = h.getBoundingClientRect();
+          const dist = Math.abs(r.top - cRect.top);
+          if (dist < closestDist) {
+            closestDist = dist;
+            isClosestIntern = /internship/i.test(t);
+          }
+        });
+        return isClosestIntern;
+      }
+
+      // Check preceding siblings
+      let prev = curr.previousElementSibling;
+      while (prev) {
+        const prevText = (prev.innerText || prev.textContent || "").toLowerCase();
+        if (prevText.includes("internship") && !prevText.includes("work experience")) return true;
+        if (prevText.includes("work experience") && !prevText.includes("internship")) return false;
+        prev = prev.previousElementSibling;
+      }
+
+      curr = curr.parentElement;
+    }
+    return false;
+  }
+
+  // Find all candidate company inputs across the document
+  function findCompanyInputs() {
+    const allInputs = Array.from(document.querySelectorAll("input:not([type='hidden']):not([type='submit']):not([type='button']):not([type='checkbox']):not([type='radio'])")).filter(isFillable);
+    return allInputs.filter(inp => {
+      const ph = inp.getAttribute("placeholder") || "";
+      const name = inp.getAttribute("name") || "";
+      const id = inp.id || "";
+      const aria = inp.getAttribute("aria-label") || "";
+      let lblText = "";
+      if (inp.labels && inp.labels.length > 0) {
+        lblText = inp.labels[0].innerText || "";
+      } else {
+        const parentLbl = inp.closest("label");
+        if (parentLbl) lblText = parentLbl.innerText || "";
+      }
+      if (!lblText) {
+        const wrapper = inp.closest("div[class*='item'], div[class*='field'], div[class*='form'], div");
+        if (wrapper) {
+          const lblEl = wrapper.querySelector("label, span[class*='label'], div[class*='label']");
+          if (lblEl) lblText = lblEl.innerText || "";
+        }
+      }
+      const combined = `${ph} ${name} ${id} ${aria} ${lblText}`.toLowerCase();
+      if (combined.includes("school") || combined.includes("university") || combined.includes("college") || combined.includes("institution")) {
+        return false;
+      }
+      return /(company|employer|organization|company[-_\s]?name)/i.test(combined);
+    });
+  }
+
+  // Find the isolated card container for a given input among sibling inputs
+  function getCardForInput(inputEl, allCandidateInputs) {
+    let curr = inputEl.parentElement;
+    let best = curr;
+    while (curr && curr !== document.body) {
+      const otherInCurr = allCandidateInputs.some(other => other !== inputEl && curr.contains(other));
+      if (otherInCurr) break;
+      best = curr;
+
+      const hasMultipleFields = best.querySelectorAll("input:not([type='hidden']), textarea").length >= 2;
+      if (hasMultipleFields) {
+        const isCardBoundary = curr.matches && curr.matches('[class*="card" i], [class*="item" i], [class*="group" i], [class*="block" i], fieldset, [role="group"]');
+        if (isCardBoundary) break;
+        if (curr.parentElement && allCandidateInputs.some(other => other !== inputEl && curr.parentElement.contains(other))) {
+          break;
+        }
+      }
+      curr = curr.parentElement;
+    }
+    return best;
+  }
+
+  // Match existing company name string to index in profile.experience
+  function findAssignedExperience(companyVal, profile) {
+    if (!companyVal || !companyVal.trim()) return -1;
+    const lower = companyVal.toLowerCase().trim();
+    return profile.experience.findIndex(exp => {
+      const expComp = exp.company.toLowerCase();
+      if (lower.includes(expComp) || expComp.includes(lower)) return true;
+      if (/nxtwave/i.test(lower) && /nxtwave/i.test(expComp)) return true;
+      if (/(\btcs\b|tata consultancy)/i.test(lower) && /(\btcs\b|tata consultancy)/i.test(expComp)) return true;
+      if (/(\bnic\b|national informatics)/i.test(lower) && /(\bnic\b|national informatics)/i.test(expComp)) return true;
+      if (/triyas/i.test(lower) && /triyas/i.test(expComp)) return true;
+      return false;
+    });
+  }
+
+  // Multi-card Experience and Internship handler with deduplication and section awareness
+  function autofillMultiExperienceUniversal(profile) {
+    const filled = [];
+    if (!profile.experience || profile.experience.length === 0) return filled;
+
+    const allCompanyInputs = findCompanyInputs();
+    if (allCompanyInputs.length === 0) return filled;
+
+    const cards = allCompanyInputs.map(compInp => {
+      const card = getCardForInput(compInp, allCompanyInputs);
+      const isIntern = isInsideInternshipSection(card) || isInsideInternshipSection(compInp);
+      return { compInp, card, isIntern };
+    });
+
+    const usedIndices = new Set();
+
+    // Pass 1: Identify existing valid assignments
+    cards.forEach(({ compInp, card, isIntern }) => {
+      const val = (compInp.value || "").trim();
+      if (val) {
+        const matchedIdx = findAssignedExperience(val, profile);
+        if (matchedIdx !== -1) {
+          const exp = profile.experience[matchedIdx];
+          const titleInp = getInputByLabelOrSelector(card, /^(title|job[-_\s]?title|position|role)$/i);
+          const hasTitle = titleInp && titleInp.value && titleInp.value.trim().length > 0;
+          if (isIntern && !exp.isInternship && !hasTitle) {
+            // Nxtwave entered erroneously in an internship card without title — skip marking as legitimately used
+          } else {
+            usedIndices.add(matchedIdx);
+          }
+        }
+      }
+    });
+
+    // Pass 2: Fill each card
+    cards.forEach(({ compInp, card, isIntern }) => {
+      let candidates = profile.experience.filter(e => isIntern ? e.isInternship : !e.isInternship);
+      if (candidates.length === 0) candidates = profile.experience;
+
+      const currVal = (compInp.value || "").trim();
+      const matchedIdx = findAssignedExperience(currVal, profile);
+      const titleInp = getInputByLabelOrSelector(card, /^(title|job[-_\s]?title|position|role)$/i);
+      const hasTitle = titleInp && titleInp.value && titleInp.value.trim().length > 0;
+
+      let targetExp = null;
+
+      if (currVal && matchedIdx !== -1) {
+        const matchedExp = profile.experience[matchedIdx];
+        if (isIntern && !matchedExp.isInternship && !hasTitle) {
+          // Replace erroneous Nxtwave with next unassigned internship (NIC, then Triyas)
+          targetExp = candidates.find(cand => !usedIndices.has(profile.experience.indexOf(cand)));
+        } else {
+          targetExp = matchedExp;
+        }
+      } else if (!currVal) {
+        targetExp = candidates.find(cand => !usedIndices.has(profile.experience.indexOf(cand)));
+      }
+
+      if (!targetExp) {
+        targetExp = profile.experience.find((cand, idx) => !usedIndices.has(idx)) || candidates[0];
+      }
+
+      if (targetExp) {
+        const expIdx = profile.experience.indexOf(targetExp);
+        usedIndices.add(expIdx);
+
+        const prefix = isIntern ? `internship-${expIdx + 1}` : `experience-${expIdx + 1}`;
+
+        // 1. Company Name
+        if (!compInp.value || compInp.value.trim() !== targetExp.company) {
+          if (setNativeValue(compInp, targetExp.company)) filled.push(`${prefix}-company`);
+        }
+
+        // 2. Title
+        if (titleInp && (!titleInp.value || titleInp.value.trim().length === 0)) {
+          if (setNativeValue(titleInp, targetExp.title)) filled.push(`${prefix}-title`);
+        }
+
+        // 3. Start & End Dates
+        let dateInputs = [];
+        const dateLabels = Array.from(card.querySelectorAll("label, span, div, p")).filter(el => {
+          const t = (el.innerText || el.textContent || "").trim();
+          return /start\s*(&|and)\s*end\s*date|dates?\s*attended/i.test(t);
+        });
+
+        if (dateLabels.length > 0) {
+          for (const dLbl of dateLabels) {
+            let container = dLbl.closest("div[class*='item' i], div[class*='field' i], div[class*='date' i], div[class*='picker' i]");
+            if (container && container !== card) {
+              const inps = Array.from(container.querySelectorAll("input:not([type='hidden'])")).filter(inp => isFillable(inp) && inp !== compInp && inp !== titleInp);
+              if (inps.length >= 2) {
+                dateInputs = inps;
+                break;
+              }
+            }
+          }
+        }
+
+        if (dateInputs.length < 2) {
+          const placeholderDates = Array.from(card.querySelectorAll('input[placeholder*="YYYY" i], input[placeholder*="MM" i], input[placeholder*="Year" i], input[placeholder*="Date" i]'))
+            .filter(inp => isFillable(inp) && inp !== compInp && inp !== titleInp);
+          if (placeholderDates.length >= 2) {
+            dateInputs = placeholderDates;
+          }
+        }
+
+        if (dateInputs.length < 2) {
+          const unusedInputs = Array.from(card.querySelectorAll("input:not([type='hidden']):not([type='checkbox']):not([type='radio'])"))
+            .filter(inp => isFillable(inp) && inp !== compInp && inp !== titleInp);
+          if (unusedInputs.length >= 2) {
+            dateInputs = unusedInputs;
+          }
+        }
+
+        dateInputs = dateInputs.filter(inp => inp !== compInp && inp !== titleInp);
+
+        if (dateInputs.length >= 2) {
+          const ph0 = dateInputs[0].placeholder || "";
+          const hasSlash = ph0.includes("/");
+          const separator = ph0.includes(" - ") ? " - " : (ph0.includes("-") ? "-" : " - ");
+
+          const startStr = hasSlash ? formatMMYYYY(targetExp.startMonth, targetExp.startYear) : formatYYYYMM(targetExp.startMonth, targetExp.startYear, separator);
+          const endStr = hasSlash ? formatMMYYYY(targetExp.endMonth, targetExp.endYear) : formatYYYYMM(targetExp.endMonth, targetExp.endYear, separator);
+
+          if (startStr && (!dateInputs[0].value || dateInputs[0].value.trim().length === 0)) {
+            if (setNativeDateValue(dateInputs[0], startStr)) filled.push(`${prefix}-startDate`);
+          }
+          if (endStr && (!dateInputs[1].value || dateInputs[1].value.trim().length === 0)) {
+            if (setNativeDateValue(dateInputs[1], endStr)) filled.push(`${prefix}-endDate`);
+          }
+        }
+
+        // 4. Description
+        const descInp = getInputByLabelOrSelector(card, /^(description|responsibilities|role[-_\s]?description|job[-_\s]?description)$/i, [
+          "textarea"
+        ]);
+        if (descInp && (!descInp.value || descInp.value.trim().length === 0)) {
+          if (setNativeValue(descInp, targetExp.description)) filled.push(`${prefix}-description`);
+        }
+      }
+    });
+
+    return filled;
+  }
+
+  // Multi-card Education handler
+  function autofillMultiEducationUniversal(profile) {
+    const filled = [];
+    if (!profile.education || profile.education.length === 0) return filled;
+
+    const allInputs = Array.from(document.querySelectorAll("input:not([type='hidden']):not([type='submit']):not([type='button']):not([type='checkbox']):not([type='radio'])")).filter(isFillable);
+    const schoolInputs = allInputs.filter(inp => {
+      const ph = inp.getAttribute("placeholder") || "";
+      const name = inp.getAttribute("name") || "";
+      const id = inp.id || "";
+      const aria = inp.getAttribute("aria-label") || "";
+      let lbl = "";
+      if (inp.labels && inp.labels.length > 0) lbl = inp.labels[0].innerText || "";
+      else {
+        const parentLbl = inp.closest("label");
+        if (parentLbl) lbl = parentLbl.innerText || "";
+      }
+      const combined = `${ph} ${name} ${id} ${aria} ${lbl}`.toLowerCase();
+      return /(school|university|institution|college)/i.test(combined);
+    });
+
+    if (schoolInputs.length === 0) return filled;
+
+    schoolInputs.forEach((schoolInp, idx) => {
+      const edu = profile.education[idx];
+      if (!edu) return;
+
+      const card = getCardForInput(schoolInp, schoolInputs);
+      const prefix = `education-${idx + 1}`;
+
+      // School
+      if (!schoolInp.value || schoolInp.value.trim().length === 0) {
+        if (setNativeValue(schoolInp, edu.school)) filled.push(`${prefix}-school`);
+      }
+
+      // Degree
+      const degInp = getInputByLabelOrSelector(card, /^(degree|degree[-_\s]?level|qualification)$/i, [
+        'input[placeholder*="degree" i]',
+        'input[name*="degree" i]'
+      ]);
+      if (degInp && (!degInp.value || degInp.value.trim().length === 0)) {
+        if (setNativeValue(degInp, edu.degreeType || edu.degree)) filled.push(`${prefix}-degree`);
+      }
+
+      // Major
+      const majorInp = getInputByLabelOrSelector(card, /^(major|field[-_\s]?of[-_\s]?study|discipline|area[-_\s]?of[-_\s]?study)$/i, [
+        'input[placeholder*="major" i]',
+        'input[name*="major" i]'
+      ]);
+      if (majorInp && (!majorInp.value || majorInp.value.trim().length === 0)) {
+        if (setNativeValue(majorInp, edu.major || edu.fieldOfStudy)) filled.push(`${prefix}-major`);
+      }
+
+      // GPA
+      const gpaInp = getInputByLabelOrSelector(card, /^(gpa|grade|score)$/i, [
+        'input[placeholder*="gpa" i]',
+        'input[name*="gpa" i]'
+      ]);
+      if (gpaInp && (!gpaInp.value || gpaInp.value.trim().length === 0)) {
+        if (setNativeValue(gpaInp, edu.gpa)) filled.push(`${prefix}-gpa`);
+      }
+
+      // Dates
+      let dateInputs = [];
+      const dateLabels = Array.from(card.querySelectorAll("label, span, div, p")).filter(el => {
+        const t = (el.innerText || el.textContent || "").trim();
+        return /start\s*(&|and)\s*end\s*date|dates?\s*attended|graduation\s*date/i.test(t);
+      });
+      if (dateLabels.length > 0) {
+        for (const dLbl of dateLabels) {
+          let container = dLbl.closest("div[class*='item' i], div[class*='field' i], div[class*='date' i], div[class*='picker' i]");
+          if (container && container !== card) {
+            const inps = Array.from(container.querySelectorAll("input:not([type='hidden'])")).filter(inp => isFillable(inp) && inp !== schoolInp && inp !== degInp && inp !== majorInp && inp !== gpaInp);
+            if (inps.length >= 2) {
+              dateInputs = inps;
+              break;
+            }
+          }
+        }
+      }
+      if (dateInputs.length < 2) {
+        const placeholderDates = Array.from(card.querySelectorAll('input[placeholder*="YYYY" i], input[placeholder*="MM" i], input[placeholder*="Year" i], input[placeholder*="Date" i]'))
+          .filter(inp => isFillable(inp) && inp !== schoolInp && inp !== degInp && inp !== majorInp && inp !== gpaInp);
+        if (placeholderDates.length >= 2) dateInputs = placeholderDates;
+      }
+      if (dateInputs.length < 2) {
+        const unused = Array.from(card.querySelectorAll("input:not([type='hidden']):not([type='checkbox']):not([type='radio'])"))
+          .filter(inp => isFillable(inp) && inp !== schoolInp && inp !== degInp && inp !== majorInp && inp !== gpaInp);
+        if (unused.length >= 2) dateInputs = unused;
+      }
+      dateInputs = dateInputs.filter(inp => inp !== schoolInp && inp !== degInp && inp !== majorInp && inp !== gpaInp);
+
+      if (dateInputs.length >= 2) {
+        const ph0 = dateInputs[0].placeholder || "";
+        const hasSlash = ph0.includes("/");
+        const separator = ph0.includes(" - ") ? " - " : (ph0.includes("-") ? "-" : " - ");
+
+        const sVal = hasSlash ? formatMMYYYY(edu.startMonth, edu.startYear) : formatYYYYMM(edu.startMonth, edu.startYear, separator);
+        const eVal = hasSlash ? formatMMYYYY(edu.endMonth, edu.endYear) : formatYYYYMM(edu.endMonth, edu.endYear, separator);
+
+        if (sVal && (!dateInputs[0].value || dateInputs[0].value.trim().length === 0)) {
+          if (setNativeDateValue(dateInputs[0], sVal)) filled.push(`${prefix}-startDate`);
+        }
+        if (eVal && (!dateInputs[1].value || dateInputs[1].value.trim().length === 0)) {
+          if (setNativeDateValue(dateInputs[1], eVal)) filled.push(`${prefix}-endDate`);
+        }
+      }
+    });
+
+    return filled;
+  }
+
+  function autofillTikTok(profile) {
+    const filled = [];
+
+    // Personal details mapping
+    const map = [
+      { sel: ['input[placeholder*="first" i]', 'input[name*="first" i]'], val: profile.personal.firstName, name: "firstName" },
+      { sel: ['input[placeholder*="last" i]', 'input[name*="last" i]'], val: profile.personal.lastName, name: "lastName" },
+      { sel: ['input[placeholder*="name" i]', 'input[name*="name" i]'], val: profile.personal.fullName, name: "fullName" },
+      { sel: ['input[type="email"]', 'input[placeholder*="email" i]'], val: profile.personal.email, name: "email" },
+      { sel: ['input[type="tel"]', 'input[placeholder*="phone" i]'], val: profile.personal.phone, name: "phone" },
+      { sel: ['input[placeholder*="linkedin" i]'], val: profile.links.linkedin, name: "linkedin" },
+      { sel: ['input[placeholder*="github" i]'], val: profile.links.github, name: "github" },
+      { sel: ['input[placeholder*="website" i]', 'input[placeholder*="portfolio" i]'], val: profile.links.portfolio, name: "portfolio" },
+      { sel: ['input[placeholder*="city" i]', 'input[placeholder*="location" i]'], val: `${profile.personal.city}, ${profile.personal.stateCode}`, name: "location" }
+    ];
+
+    map.forEach(item => {
+      const el = findField(item.sel);
+      if (el && item.val && (!el.value || el.value.trim().length === 0)) {
+        if (setNativeValue(el, item.val)) filled.push(item.name);
+      }
+    });
+
+    // Run multi-experience & multi-education cards
+    const expFilled = autofillMultiExperienceUniversal(profile);
+    const eduFilled = autofillMultiEducationUniversal(profile);
+    filled.push(...expFilled, ...eduFilled);
+
+    // Legal / Authorization / Sponsorship radios
+    const radioContainers = document.querySelectorAll("div[class*='item'], div[class*='field'], fieldset, [role='radiogroup']");
+    radioContainers.forEach(container => {
+      const text = (container.innerText || "").toLowerCase();
+      if (text.includes("authorized to work") || text.includes("legally authorized")) {
+        const yesEl = Array.from(container.querySelectorAll("label, span, input")).find(l => (l.innerText || l.value || "").trim().toLowerCase() === "yes");
+        if (yesEl) clickElement(yesEl);
+      }
+      if (text.includes("sponsorship")) {
+        const yesEl = Array.from(container.querySelectorAll("label, span, input")).find(l => (l.innerText || l.value || "").trim().toLowerCase() === "yes");
+        if (yesEl) clickElement(yesEl);
+      }
+    });
+
+    return filled;
+  }
+
+  // ==========================================
+  // 6. UNIVERSAL HEURISTIC MATCHER
   // ==========================================
   function autofillUniversal(profile) {
     const filled = [];
-    const inputs = document.querySelectorAll("input:not([type='hidden']):not([type='submit']):not([type='button']), textarea, select");
 
-    // Definition of patterns for matching fields
+    // 1. Process multi-card experience and education first with deduplication and section awareness
+    const expFilled = autofillMultiExperienceUniversal(profile);
+    const eduFilled = autofillMultiEducationUniversal(profile);
+    filled.push(...expFilled, ...eduFilled);
+
+    // 2. Definition of patterns for matching general applicant fields
     const patterns = [
       {
         field: "firstName",
@@ -735,46 +1180,48 @@
         val: profile.links.portfolio
       },
       {
-        field: "school",
-        regex: /(school|university|college|institution)/i,
-        val: profile.education[0].school
-      },
-      {
-        field: "degree",
-        regex: /(degree|major|field[-_\s]?of[-_\s]?study)/i,
-        val: profile.education[0].fieldOfStudy
-      },
-      {
-        field: "gpa",
-        regex: /(gpa|grade[-_\s]?point)/i,
-        val: profile.education[0].gpa
-      },
-      {
-        field: "jobTitle",
-        regex: /(current[-_\s]?title|job[-_\s]?title|most[-_\s]?recent[-_\s]?title|position)/i,
-        val: profile.experience[0].title
-      },
-      {
-        field: "company",
-        regex: /(current[-_\s]?company|company[-_\s]?name|employer|most[-_\s]?recent[-_\s]?employer|organization)/i,
-        val: profile.experience[0].company
-      },
-      {
-        field: "location",
-        regex: /(job[-_\s]?location|^location$)/i,
-        val: profile.experience[0].location || (profile.personal.city + ", " + profile.personal.stateCode)
-      },
-      {
-        field: "description",
-        regex: /(role[-_\s]?description|job[-_\s]?description|^description$|responsibilities)/i,
-        val: profile.experience[0].description
-      },
-      {
         field: "skills",
         regex: /(skills|key[-_\s]?skills|technical[-_\s]?skills)/i,
         val: profile.skills.join(", ")
       }
     ];
+
+    // Single-field form fallback only if multi-experience/education found no cards
+    if (expFilled.length === 0) {
+      patterns.push(
+        {
+          field: "company",
+          regex: /(current[-_\s]?company|company[-_\s]?name|employer|most[-_\s]?recent[-_\s]?employer|organization)/i,
+          val: profile.experience[0].company
+        },
+        {
+          field: "jobTitle",
+          regex: /(current[-_\s]?title|job[-_\s]?title|most[-_\s]?recent[-_\s]?title|position)/i,
+          val: profile.experience[0].title
+        }
+      );
+    }
+    if (eduFilled.length === 0) {
+      patterns.push(
+        {
+          field: "school",
+          regex: /(school|university|college|institution)/i,
+          val: profile.education[0].school
+        },
+        {
+          field: "degree",
+          regex: /(degree|major|field[-_\s]?of[-_\s]?study)/i,
+          val: profile.education[0].fieldOfStudy
+        },
+        {
+          field: "gpa",
+          regex: /(gpa|grade[-_\s]?point)/i,
+          val: profile.education[0].gpa
+        }
+      );
+    }
+
+    const inputs = document.querySelectorAll("input:not([type='hidden']):not([type='submit']):not([type='button']), textarea, select");
 
     inputs.forEach(el => {
       // Don't overwrite if already filled
@@ -829,6 +1276,8 @@
       filled = autofillLever(profile);
     } else if (platform === "Ashby") {
       filled = autofillAshby(profile);
+    } else if (platform === "TikTok") {
+      filled = autofillTikTok(profile);
     }
 
     // Run universal heuristic only for non-Workday platforms to protect Workday multi-card state
@@ -888,7 +1337,9 @@
       qualcomm: "Qualcomm",
       oracle: "Oracle",
       ibm: "IBM",
-      adobe: "Adobe"
+      adobe: "Adobe",
+      tiktok: "TikTok",
+      bytedance: "ByteDance"
     };
 
     const key = c.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -948,6 +1399,14 @@
       if (pathParts.length > 0) company = cleanCompanyName(pathParts[0]);
       const titleEl = document.querySelector("h1");
       if (titleEl) role = (titleEl.innerText || "").trim();
+    }
+    // 5. TikTok / ByteDance
+    else if (host.includes("tiktok.com") || host.includes("bytedance.com") || host.includes("feishu.cn")) {
+      company = host.includes("tiktok") ? "TikTok" : "ByteDance";
+      const h1 = document.querySelector("h1, .position-title, [class*='position-title' i], [class*='title' i]");
+      if (h1 && (h1.innerText || "").trim().length > 3) {
+        role = (h1.innerText || "").trim().split("\n")[0];
+      }
     }
 
     // 5. Fallback heuristics for any site

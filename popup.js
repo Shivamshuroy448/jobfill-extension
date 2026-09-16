@@ -51,6 +51,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     detectedPlatform = "Ashby";
   } else if (url.includes("smartrecruiters.com")) {
     detectedPlatform = "SmartRecruiters";
+  } else if (url.includes("tiktok.com") || url.includes("bytedance.com") || url.includes("feishu.cn")) {
+    detectedPlatform = "TikTok";
   }
 
   platformBadge.textContent = detectedPlatform;
@@ -84,6 +86,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Fallback extraction from URL and Title
     let comp = "Cardinal Health";
     if (url.includes("cardinalhealth")) comp = "Cardinal Health";
+    else if (url.includes("tiktok")) comp = "TikTok";
+    else if (url.includes("bytedance")) comp = "ByteDance";
     else {
       try {
         const h = new URL(activeTab.url).hostname.replace(/^www\./, "").split(".")[0];
