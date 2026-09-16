@@ -1122,13 +1122,13 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
     window.addEventListener("message", handler);
     window.postMessage({ type: "RESUMESYNC_TO_OVERLEAF", latex: fullLatex }, "*");
 
-    // Check if extension acknowledged within 1000ms. If not, don't stall the user.
+    // Check if extension acknowledged within 2500ms.
     setTimeout(() => {
       if (!extensionConnected) {
         window.removeEventListener("message", handler);
         resolve(false);
       }
-    }, 1000);
+    }, 2500);
 
     // Hard timeout for extension injection
     setTimeout(() => {
@@ -1178,7 +1178,7 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
   saveTargetCompany(companyName);
 }
 
-// Function to download resume
+// Function to download resume PDF
 async function downloadResumePDF() {
   const btnMain = document.getElementById("btn-download-resume-main");
   const btnTop = document.getElementById("btn-download-resume-top");
@@ -1191,23 +1191,44 @@ async function downloadResumePDF() {
   const origMain = btnMain ? btnMain.innerHTML : "";
   const origTop = btnTop ? btnTop.innerHTML : "";
 
-  setBtnText(`<span>⏳</span><span>Downloading...</span>`);
+  setBtnText(`<span>⏳</span><span>Downloading PDF...</span>`);
 
   const companyInput = document.getElementById("company-input");
   const companyName = (companyInput ? companyInput.value.trim() : "") || "General";
 
-  // 1. Download tailored .tex file directly using standard browser download
-  downloadTexFile();
+  // 1. Listen for extension download confirmation
+  let handledByExtension = false;
+  const downloadHandler = (e) => {
+    if (e.data && e.data.type === "RESUMESYNC_DOWNLOAD_RESULT") {
+      handledByExtension = true;
+      window.removeEventListener("message", downloadHandler);
+      showToastFeedback(`📥 <strong>Downloading PDF from Overleaf!</strong><br>Check your Downloads folder for <code>roy.pdf</code>.`);
+      setBtnText(`<span>✓</span><span>PDF Downloaded!</span>`);
+    }
+  };
+  window.addEventListener("message", downloadHandler);
 
-  // 2. Trigger Overleaf PDF download via extension relay if open
+  // 2. Trigger Overleaf PDF download via extension relay
   window.postMessage({ type: "RESUMESYNC_DOWNLOAD_PDF" }, "*");
 
-  setBtnText(`<span>✓</span><span>Saved .tex &amp; Triggered Download!</span>`);
-
+  // 3. Fallback: If extension is not active or Overleaf tab is closed
   setTimeout(() => {
-    if (btnMain) btnMain.innerHTML = origMain;
-    if (btnTop) btnTop.innerHTML = origTop;
-  }, 3500);
+    window.removeEventListener("message", downloadHandler);
+    if (!handledByExtension) {
+      // Open Overleaf tab directly so user can download
+      setBtnText(`<span>📥</span><span>Opening Overleaf...</span>`);
+      showToastFeedback(
+        `📄 <strong>Overleaf Tab Not Detected</strong><br>` +
+        `Opening Overleaf project to compile and download your resume PDF...`,
+        6000
+      );
+      window.open("https://www.overleaf.com/project/69787f4c07ea46326eb8587e", "_blank");
+    }
+    setTimeout(() => {
+      if (btnMain) btnMain.innerHTML = origMain;
+      if (btnTop) btnTop.innerHTML = origTop;
+    }, 3500);
+  }, 2000);
 
   saveTargetCompany(companyName);
 }
