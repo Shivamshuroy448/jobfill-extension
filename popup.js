@@ -49,6 +49,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     detectedPlatform = "Lever";
   } else if (url.includes("ashbyhq.com")) {
     detectedPlatform = "Ashby";
+  } else if (url.includes("adp.com") || url.includes("workforcenow.adp.com")) {
+    detectedPlatform = "ADP";
   } else if (url.includes("smartrecruiters.com")) {
     detectedPlatform = "SmartRecruiters";
   } else if (url.includes("tiktok.com") || url.includes("bytedance.com") || url.includes("feishu.cn")) {
@@ -297,6 +299,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     statusMessage.classList.remove("hidden");
   }
 
+  // Resume Sync tool link
+  const linkResumeSync = document.getElementById("link-resume-sync");
+  if (linkResumeSync) {
+    linkResumeSync.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (chrome.tabs && chrome.tabs.create) {
+        chrome.tabs.create({ url: "file:///Users/roy/projects/resume-sync/index.html" });
+      } else {
+        window.open("file:///Users/roy/projects/resume-sync/index.html", "_blank");
+      }
+    });
+  }
+
   // Options page link
   if (linkOptions) {
     linkOptions.addEventListener("click", (e) => {
@@ -308,4 +323,167 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
+
+  // ==========================================
+  // TAB SWITCHING & AI COPILOT LOGIC
+  // ==========================================
+  const navTabs = document.querySelectorAll(".nav-tab");
+  const tabContents = document.querySelectorAll(".tab-content");
+
+  navTabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      navTabs.forEach(t => t.classList.remove("active"));
+      tabContents.forEach(c => {
+        c.classList.remove("active");
+        c.classList.add("hidden");
+      });
+      tab.classList.add("active");
+      const targetId = tab.getAttribute("data-tab");
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        targetEl.classList.remove("hidden");
+        targetEl.classList.add("active");
+      }
+    });
+  });
+
+  // Copilot Elements
+  const btnScanPage = document.getElementById("btn-scan-page");
+  const scannedListEl = document.getElementById("scanned-questions-list");
+  const customQuestionInput = document.getElementById("custom-question-input");
+  const chips = document.querySelectorAll(".chip");
+  const btnGenerateAnswer = document.getElementById("btn-generate-answer");
+  const generatedContainer = document.getElementById("generated-answer-container");
+  const generatedAnswerText = document.getElementById("generated-answer-text");
+  const btnCopyAnswer = document.getElementById("btn-copy-answer");
+  const inputGeminiKey = document.getElementById("input-gemini-key");
+  const btnSaveKey = document.getElementById("btn-save-key");
+  const btnOpenOptionsFull = document.getElementById("btn-open-options-full");
+
+  // Load saved Gemini API Key
+  if (chrome.storage && chrome.storage.local && inputGeminiKey) {
+    chrome.storage.local.get(["geminiApiKey"], (res) => {
+      if (res && res.geminiApiKey) {
+        inputGeminiKey.value = res.geminiApiKey;
+      }
+    });
+  }
+
+  if (btnSaveKey && inputGeminiKey) {
+    btnSaveKey.addEventListener("click", () => {
+      const key = (inputGeminiKey.value || "").trim();
+      chrome.storage.local.set({ geminiApiKey: key }, () => {
+        btnSaveKey.textContent = "Saved!";
+        btnSaveKey.style.background = "#10b981";
+        btnSaveKey.style.color = "#0f172a";
+        setTimeout(() => {
+          btnSaveKey.textContent = "Save";
+          btnSaveKey.style.background = "#1e293b";
+          btnSaveKey.style.color = "#38bdf8";
+        }, 2000);
+      });
+    });
+  }
+
+  // Quick Chips
+  chips.forEach(chip => {
+    chip.addEventListener("click", () => {
+      if (customQuestionInput) {
+        customQuestionInput.value = chip.getAttribute("data-q");
+        generateCustomAnswer();
+      }
+    });
+  });
+
+  async function generateCustomAnswer() {
+    if (!customQuestionInput) return;
+    const qText = (customQuestionInput.value || "").trim();
+    if (!qText) return;
+
+    btnGenerateAnswer.disabled = true;
+    btnGenerateAnswer.innerHTML = `<span>⏳</span><span>Synthesizing...</span>`;
+
+    const selectedStyle = document.querySelector('input[name="copilot-style"]:checked')?.value || "comprehensive";
+
+    try {
+      if (window.JobFillAI && typeof window.JobFillAI.generateAnswer === "function") {
+        const res = await window.JobFillAI.generateAnswer(qText, {
+          style: selectedStyle,
+          jobContext: currentJobMeta
+        });
+        if (generatedAnswerText && generatedContainer) {
+          generatedAnswerText.value = res.answer || "";
+          generatedContainer.classList.remove("hidden");
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      btnGenerateAnswer.disabled = false;
+      btnGenerateAnswer.innerHTML = `<span>✨</span><span>Generate Answer for Shivamshu</span>`;
+    }
+  }
+
+  if (btnGenerateAnswer) {
+    btnGenerateAnswer.addEventListener("click", generateCustomAnswer);
+  }
+
+  if (btnCopyAnswer && generatedAnswerText) {
+    btnCopyAnswer.addEventListener("click", () => {
+      navigator.clipboard.writeText(generatedAnswerText.value).then(() => {
+        btnCopyAnswer.textContent = "✓ Copied!";
+        setTimeout(() => { btnCopyAnswer.textContent = "📋 Copy"; }, 2000);
+      });
+    });
+  }
+
+  // Scan Page Questions from active tab
+  if (btnScanPage && scannedListEl) {
+    btnScanPage.addEventListener("click", async () => {
+      btnScanPage.textContent = "Scanning...";
+      scannedListEl.innerHTML = `<div class="empty-state">Scanning active page for form questions...</div>`;
+
+      try {
+        chrome.tabs.sendMessage(activeTab.id, { action: "scanQuestions" }, (res) => {
+          btnScanPage.textContent = "Scan Page";
+          if (chrome.runtime.lastError || !res || !res.questions || res.questions.length === 0) {
+            scannedListEl.innerHTML = `<div class="empty-state">No open-ended essay questions found on this step.</div>`;
+            return;
+          }
+
+          scannedListEl.innerHTML = "";
+          res.questions.forEach((q) => {
+            const card = document.createElement("div");
+            card.className = "copilot-section";
+            card.style.padding = "8px 10px";
+            card.innerHTML = `
+              <div style="font-size: 11.5px; font-weight: 600; color: #f1f5f9; margin-bottom: 4px;">${q.label}</div>
+              <div style="font-size: 11px; color: #94a3b8; line-height: 1.4; margin-bottom: 6px;">${(q.suggestedAnswer || "").slice(0, 140)}...</div>
+              <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                <button class="btn-mini btn-copy-scanned">📋 Copy</button>
+              </div>
+            `;
+            const copyBtn = card.querySelector(".btn-copy-scanned");
+            copyBtn.onclick = () => {
+              navigator.clipboard.writeText(q.suggestedAnswer).then(() => {
+                copyBtn.textContent = "✓ Copied!";
+                setTimeout(() => { copyBtn.textContent = "📋 Copy"; }, 2000);
+              });
+            };
+            scannedListEl.appendChild(card);
+          });
+        });
+      } catch (e) {
+        btnScanPage.textContent = "Scan Page";
+        scannedListEl.innerHTML = `<div class="empty-state">Could not connect to page. Refresh the page and try again.</div>`;
+      }
+    });
+  }
+
+  if (btnOpenOptionsFull) {
+    btnOpenOptionsFull.addEventListener("click", () => {
+      chrome.runtime.openOptionsPage();
+    });
+  }
 });
+

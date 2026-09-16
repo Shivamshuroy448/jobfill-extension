@@ -1,7 +1,7 @@
 // JobFill AI — Default Profile Data for Shivamshu Roy
 // Extracted and verified from https://shivamshuroy.is-a.dev/ and resume.pdf
 
-const DEFAULT_PROFILE = {
+var DEFAULT_PROFILE = window.DEFAULT_PROFILE || {
   personal: {
     firstName: "Shivamshu",
     lastName: "Roy",
@@ -9,14 +9,14 @@ const DEFAULT_PROFILE = {
     preferredName: "Shivamshu",
     fullName: "Shivamshu Roy Velamakanni",
     email: "velamakannishivamshuroy@gmail.com",
-    phone: "(716) 247-9102",
+    phone: "(585) 795-0076",
     phoneCountryCode: "+1",
-    addressLine1: "1200 University Ave",
-    addressLine2: "",
-    city: "Buffalo",
+    addressLine1: "1525 Amherst Manor Dr",
+    addressLine2: "Apt #912",
+    city: "Amherst",
     state: "New York",
     stateCode: "NY",
-    postalCode: "14260",
+    postalCode: "14221",
     country: "United States of America",
     countryCode: "US"
   },
@@ -187,6 +187,18 @@ function getStoredProfile() {
       chrome.storage.local.get(["userProfile"], (result) => {
         if (result && result.userProfile) {
           const p = result.userProfile;
+          // Ensure personal contact info is updated if matching old default
+          if (p.personal) {
+            if (p.personal.phone === "(716) 247-9102" || !p.personal.phone) {
+              p.personal.phone = DEFAULT_PROFILE.personal.phone;
+            }
+            if (p.personal.addressLine1 === "1200 University Ave" || !p.personal.addressLine1) {
+              p.personal.addressLine1 = DEFAULT_PROFILE.personal.addressLine1;
+              p.personal.addressLine2 = DEFAULT_PROFILE.personal.addressLine2;
+              p.personal.postalCode = DEFAULT_PROFILE.personal.postalCode;
+              p.personal.city = DEFAULT_PROFILE.personal.city;
+            }
+          }
           // Ensure all 4 verified experiences are available
           if (!p.experience || p.experience.length < 4) {
             p.experience = DEFAULT_PROFILE.experience;

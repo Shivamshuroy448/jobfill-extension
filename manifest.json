@@ -1,13 +1,17 @@
 {
   "manifest_version": 3,
   "name": "JobFill AI — One-Click Job & Internship Autofiller",
-  "version": "1.0.0",
-  "description": "Autofills job and internship applications on Workday, Greenhouse, Lever, Ashby, and career portals in 1-click.",
+  "version": "1.2.0",
+  "description": "Autofills job and internship applications with AI question copilot on Workday, Greenhouse, Lever, Ashby, ADP, and any career portal in 1-click.",
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "host_permissions": [
     "<all_urls>"
   ],
@@ -26,6 +30,14 @@
       "matches": ["<all_urls>"],
       "js": [
         "profile-data.js",
+        "ai-copilot.js",
+        "sites/greenhouse.js",
+        "sites/tiktok.js",
+        "sites/workday.js",
+        "sites/lever.js",
+        "sites/ashby.js",
+        "sites/adp.js",
+        "sites/universal.js",
         "autofill-core.js",
         "content.js"
       ],

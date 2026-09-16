@@ -102,6 +102,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadTrackerSettingsToUI(currentTrackerSettings);
   await renderTrackedTable();
 
+  // Load saved Gemini key
+  const optGeminiKey = document.getElementById("opt-gemini-key");
+  if (optGeminiKey && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(["geminiApiKey"], (res) => {
+      if (res && res.geminiApiKey) optGeminiKey.value = res.geminiApiKey;
+    });
+  }
+
   // Copy Apps Script Code button
   if (btnCopyScript && appsScriptCode) {
     btnCopyScript.addEventListener("click", () => {
@@ -192,6 +200,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentTrackerSettings.sheetUrl = tSheetUrl.value.trim();
       currentTrackerSettings.webhookUrl = tWebhookUrl.value.trim();
       await window.JobFillProfile.saveTrackerSettings(currentTrackerSettings);
+    }
+
+    // Save Gemini key
+    if (optGeminiKey && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ geminiApiKey: (optGeminiKey.value || "").trim() });
     }
 
     toast.classList.add("show");
