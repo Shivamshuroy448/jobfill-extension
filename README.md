@@ -19,27 +19,27 @@
 
 ```mermaid
 flowchart TD
-    subgraph JobFill Application Suite
-        ExtPopup[Extension Popup & Options]
-        ProfileDB[Profile Data & Custom Answers]
-        Worker[Service Worker / background.js]
-        ContentScript[ATS Content Scripts]
-        Copilot[AI Copilot Engine]
-        ResumeSyncModule["ResumeSync Module\n(/resume-sync)"]
+    subgraph Suite["JobFill Application Suite"]
+        ExtPopup["Extension Popup & Options"]
+        ProfileDB["Profile Data & Custom Answers"]
+        Worker["Service Worker (background.js)"]
+        ContentScript["ATS Content Scripts"]
+        Copilot["AI Copilot Engine"]
+        ResumeSyncModule["ResumeSync Module (/resume-sync)"]
     end
 
-    subgraph Target Job Portals
-        Workday[Workday]
-        Greenhouse[Greenhouse]
-        Lever[Lever]
-        Ashby[Ashby]
-        ADP[ADP]
-        Universal[Universal Career Forms]
+    subgraph Portals["Target Job Portals"]
+        Workday["Workday"]
+        Greenhouse["Greenhouse"]
+        Lever["Lever"]
+        Ashby["Ashby"]
+        ADP["ADP"]
+        Universal["Universal Career Forms"]
     end
 
-    subgraph Overleaf Direct Sync
-        OverleafTab[Overleaf CodeMirror 6 Editor]
-        PDFRecompile[Auto PDF Recompile]
+    subgraph Overleaf["Overleaf Direct Sync"]
+        OverleafTab["Overleaf CodeMirror 6 Editor"]
+        PDFRecompile["Auto PDF Recompile"]
     end
 
     ProfileDB --> ContentScript
@@ -51,9 +51,9 @@ flowchart TD
     ContentScript --> ADP
     ContentScript --> Universal
 
-    ExtPopup -->|Open Resume Matcher| ResumeSyncModule
-    ResumeSyncModule -->|window.postMessage| Worker
-    Worker -->|MAIN World CM6 Dispatch| OverleafTab
+    ExtPopup -->|"Open Resume Matcher"| ResumeSyncModule
+    ResumeSyncModule -->|"window.postMessage"| Worker
+    Worker -->|"MAIN World CM6 Dispatch"| OverleafTab
     OverleafTab --> PDFRecompile
 ```
 

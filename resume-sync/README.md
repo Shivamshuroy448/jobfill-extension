@@ -48,33 +48,33 @@
 ```mermaid
 flowchart TD
     subgraph Ingestion["1. Document Ingestion"]
-        A1[Paste Job Description]
-        A2[Upload PDF via PDF.js]
-        A3[Upload DOCX via Mammoth.js]
-        A4[1-Click Sample JDs]
+        A1["Paste Job Description"]
+        A2["Upload PDF via PDF.js"]
+        A3["Upload DOCX via Mammoth.js"]
+        A4["1-Click Sample JDs"]
     end
 
     subgraph CoreEngine["2. Deterministic Client-Side Engine (0 ms)"]
-        B[Text Normalizer & Lexical Scanner]
-        C[Keyword Matcher & ATS Scoring]
-        D[Domain Classifier\nHealthcare | Fintech | Data Eng | AI/ML | FullStack]
-        E[Dynamic Project Rephraser & Ordering Engine]
-        F[Truth Anchor Validator\nLocks GPA, Metrics, Degrees, IEEE]
+        B["Text Normalizer & Lexical Scanner"]
+        C["Keyword Matcher & ATS Scoring"]
+        D["Domain Classifier (Healthcare, Fintech, Data Eng, AI/ML, FullStack)"]
+        E["Dynamic Project Rephraser & Ordering Engine"]
+        F["Truth Anchor Validator (Locks GPA, Metrics, Degrees, IEEE)"]
     end
 
     subgraph LaTeXGen["3. LaTeX Document Generation"]
-        G[Jake's Resume Base Structure]
-        H[1-Page Typography Budget Enforcer\n25-30 words / bullet]
-        I[Dynamic LaTeX Output Generation]
+        G["Jake's Resume Base Structure"]
+        H["1-Page Typography Budget Enforcer (25-30 words / bullet)"]
+        I["Dynamic LaTeX Output Generation"]
     end
 
     subgraph SyncEngine["4. Synchronization & Export"]
-        J1[Download .TEX File]
-        J2[Download Rendered PDF]
-        J3[Direct Clipboard Copy]
-        K[JobFill Extension Bridge\npostMessage]
-        L[Overleaf CodeMirror 6 Tab\nview.dispatch in MAIN World]
-        M[Auto-Trigger Overleaf Recompile]
+        J1["Download .TEX File"]
+        J2["Download Rendered PDF"]
+        J3["Direct Clipboard Copy"]
+        K["JobFill Extension Bridge (postMessage)"]
+        L["Overleaf CodeMirror 6 Tab (view.dispatch in MAIN World)"]
+        M["Auto-Trigger Overleaf Recompile"]
     end
 
     A1 --> B
