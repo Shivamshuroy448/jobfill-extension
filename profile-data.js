@@ -110,6 +110,48 @@ const DEFAULT_PROFILE = {
       description: "Conducted EDA on large datasets and engineered preprocessing pipelines using Python (Pandas, NumPy) and SQL. Trained and evaluated machine learning models for classification and regression; created interactive reporting dashboards."
     }
   ],
+  projects: [
+    {
+      name: "CheckmateLab — Chess AI Engine & Analysis Platform",
+      role: "Lead Machine Learning Engineer / Developer",
+      link: "https://github.com/Shivamshuroy448/checkmatelab",
+      startMonth: "January",
+      startYear: "2024",
+      endMonth: "May",
+      endYear: "2024",
+      description: "Engineered a real-time chess position analysis platform powered by Stockfish 16 NNUE with automated opening book detection and deep position evaluations. Developed custom move accuracy scoring algorithms, win-loss probabilities, and integrated Google OAuth and Firebase."
+    },
+    {
+      name: "ClearHire AI — AI Recruiter & Application Automation",
+      role: "AI / Full-Stack Engineer",
+      link: "https://github.com/Shivamshuroy448/clearhireai",
+      startMonth: "June",
+      startYear: "2024",
+      endMonth: "December",
+      endYear: "2024",
+      description: "Developed an AI-driven job application tracker with Gmail Auto-Pilot synchronization. Implemented algorithmic ghosting risk estimation based on company reply velocity and automated context-aware email drafting using LLMs."
+    },
+    {
+      name: "Green Grid AI — EV Charging Demand & Location Prediction",
+      role: "Data Scientist / ML Researcher",
+      link: "https://github.com/Shivamshuroy448/greengridai",
+      startMonth: "August",
+      startYear: "2023",
+      endMonth: "December",
+      endYear: "2023",
+      description: "Built spatial-temporal machine learning models forecasting electric vehicle charging demand and optimizing station placement across a 17,280-record dataset. Engineered end-to-end predictive pipelines with Scikit-Learn, Pandas, and NumPy."
+    },
+    {
+      name: "IEEE Published Research — Financial Time Series Forecasting",
+      role: "Lead Researcher / Author",
+      link: "https://doi.org/10.1109/CVMI59938.2023.10465177",
+      startMonth: "March",
+      startYear: "2023",
+      endMonth: "October",
+      endYear: "2023",
+      description: "Authored and published research in IEEE Xplore (CVMI-2023). Formulated optimization algorithms improving prediction accuracy of Holt-Winters and Moving Average models for volatile stock market time-series."
+    }
+  ],
   skills: [
     "Python", "SQL", "R", "Java", "C++", "JavaScript", "PyTorch", "TensorFlow",
     "Scikit-Learn", "Google BigQuery", "PostgreSQL", "MySQL", "Firebase",
@@ -158,6 +200,10 @@ function getStoredProfile() {
                 exp.isInternship = def ? def.isInternship : /intern/i.test(exp.title || "");
               }
             });
+          }
+          // Ensure projects are available
+          if (!p.projects || p.projects.length < 4) {
+            p.projects = DEFAULT_PROFILE.projects;
           }
           chrome.storage.local.set({ userProfile: p });
           resolve(p);

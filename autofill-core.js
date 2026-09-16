@@ -689,9 +689,52 @@
   // 5. TIKTOK / BYTEDANCE ADAPTER & MULTI-CARD HELPERS
   // ==========================================
 
+  // Helper: check if a container or card is inside a "Project" section
+  function isInsideProjectSection(container) {
+    if (!container) return false;
+    let curr = container;
+    while (curr && curr !== document.body) {
+      const headings = Array.from(curr.querySelectorAll("h1, h2, h3, h4, h5, h6, legend, [class*='title' i], [class*='header' i]"));
+      const headingTexts = headings.map(h => (h.innerText || h.textContent || "").trim()).filter(Boolean);
+
+      const hasProject = headingTexts.some(t => /project/i.test(t));
+      const hasWorkOrIntern = headingTexts.some(t => /(work\s*experience|internship|employment)/i.test(t));
+
+      if (hasProject && !hasWorkOrIntern) return true;
+      if (hasWorkOrIntern && !hasProject) return false;
+      if (hasProject && hasWorkOrIntern) {
+        const cRect = container.getBoundingClientRect();
+        let closestDist = Infinity;
+        let isClosestProject = false;
+        headings.forEach(h => {
+          const t = (h.innerText || "").trim();
+          const r = h.getBoundingClientRect();
+          const dist = Math.abs(r.top - cRect.top);
+          if (dist < closestDist) {
+            closestDist = dist;
+            isClosestProject = /project/i.test(t);
+          }
+        });
+        return isClosestProject;
+      }
+
+      let prev = curr.previousElementSibling;
+      while (prev) {
+        const prevText = (prev.innerText || prev.textContent || "").toLowerCase();
+        if (prevText.includes("project") && !prevText.includes("work experience") && !prevText.includes("internship")) return true;
+        if ((prevText.includes("work experience") || prevText.includes("internship")) && !prevText.includes("project")) return false;
+        prev = prev.previousElementSibling;
+      }
+
+      curr = curr.parentElement;
+    }
+    return false;
+  }
+
   // Helper: check if a container or card is inside an "Internship" section
   function isInsideInternshipSection(container) {
     if (!container) return false;
+    if (isInsideProjectSection(container)) return false;
     let curr = container;
     while (curr && curr !== document.body) {
       const headings = Array.from(curr.querySelectorAll("h1, h2, h3, h4, h5, h6, legend, [class*='title' i], [class*='header' i]"));
@@ -736,6 +779,9 @@
   function findCompanyInputs() {
     const allInputs = Array.from(document.querySelectorAll("input:not([type='hidden']):not([type='submit']):not([type='button']):not([type='checkbox']):not([type='radio'])")).filter(isFillable);
     return allInputs.filter(inp => {
+      // Must not be inside project experience section
+      if (isInsideProjectSection(inp)) return false;
+
       const ph = inp.getAttribute("placeholder") || "";
       const name = inp.getAttribute("name") || "";
       const id = inp.id || "";
@@ -1056,6 +1102,172 @@
     return filled;
   }
 
+  // Find all candidate project name inputs across the document
+  function findProjectNameInputs() {
+    const allInputs = Array.from(document.querySelectorAll("input:not([type='hidden']):not([type='submit']):not([type='button']):not([type='checkbox']):not([type='radio'])")).filter(isFillable);
+    return allInputs.filter(inp => {
+      const ph = (inp.getAttribute("placeholder") || "").toLowerCase();
+      const name = (inp.getAttribute("name") || "").toLowerCase();
+      const id = (inp.id || "").toLowerCase();
+      const aria = (inp.getAttribute("aria-label") || "").toLowerCase();
+      let lblText = "";
+      if (inp.labels && inp.labels.length > 0) {
+        lblText = inp.labels[0].innerText || "";
+      } else {
+        const parentLbl = inp.closest("label");
+        if (parentLbl) lblText = parentLbl.innerText || "";
+      }
+      if (!lblText) {
+        const wrapper = inp.closest("div[class*='item'], div[class*='field'], div[class*='form'], div");
+        if (wrapper) {
+          const lblEl = wrapper.querySelector("label, span[class*='label'], div[class*='label']");
+          if (lblEl) lblText = lblEl.innerText || "";
+        }
+      }
+      const combined = `${ph} ${name} ${id} ${aria} ${lblText}`.toLowerCase();
+
+      // Exclude education / work company
+      if (combined.includes("school") || combined.includes("university") || combined.includes("company") || combined.includes("employer")) {
+        return false;
+      }
+
+      const inProjectSection = isInsideProjectSection(inp);
+      if (inProjectSection) {
+        return /(project\s*name|^project$|^title$)/i.test(lblText.trim()) || /(project\s*name|^project$)/i.test(combined);
+      } else {
+        return /(project[-_\s]?name)/i.test(combined);
+      }
+    });
+  }
+
+  // Multi-card Project Experience handler with deduplication
+  function autofillMultiProjectsUniversal(profile) {
+    const filled = [];
+    if (!profile.projects || profile.projects.length === 0) return filled;
+
+    const projInputs = findProjectNameInputs();
+    if (projInputs.length === 0) return filled;
+
+    const cards = projInputs.map(pInp => {
+      const card = getCardForInput(pInp, projInputs);
+      return { pInp, card };
+    });
+
+    const usedIndices = new Set();
+
+    // Pass 1: Identify existing project names already filled
+    cards.forEach(({ pInp }) => {
+      const val = (pInp.value || "").toLowerCase().trim();
+      if (val) {
+        const matchedIdx = profile.projects.findIndex(p => {
+          const pName = p.name.toLowerCase();
+          return val.includes(pName) || pName.includes(val) ||
+                 (val.includes("checkmatelab") && pName.includes("checkmatelab")) ||
+                 (val.includes("clearhire") && pName.includes("clearhire")) ||
+                 (val.includes("green grid") && pName.includes("green grid")) ||
+                 (val.includes("ieee") && pName.includes("ieee"));
+        });
+        if (matchedIdx !== -1) usedIndices.add(matchedIdx);
+      }
+    });
+
+    // Pass 2: Fill each project card
+    cards.forEach(({ pInp, card }, cardIdx) => {
+      let targetProj = profile.projects.find((p, i) => !usedIndices.has(i));
+      if (!targetProj) targetProj = profile.projects[cardIdx % profile.projects.length];
+
+      if (targetProj) {
+        const pIdx = profile.projects.indexOf(targetProj);
+        usedIndices.add(pIdx);
+        const prefix = `project-${pIdx + 1}`;
+
+        // 1. Project Name
+        if (!pInp.value || pInp.value.trim().length === 0) {
+          if (setNativeValue(pInp, targetProj.name)) filled.push(`${prefix}-name`);
+        }
+
+        // 2. Role
+        const roleInp = getInputByLabelOrSelector(card, /^(role|your\s*role|position|title)$/i, [
+          'input[placeholder*="role" i]',
+          'input[name*="role" i]'
+        ]);
+        if (roleInp && roleInp !== pInp && (!roleInp.value || roleInp.value.trim().length === 0)) {
+          if (setNativeValue(roleInp, targetProj.role)) filled.push(`${prefix}-role`);
+        }
+
+        // 3. Project URL / Link
+        const linkInp = getInputByLabelOrSelector(card, /^(project\s*link|project\s*url|link|url|github|website)$/i, [
+          'input[placeholder*="http" i]',
+          'input[placeholder*="url" i]',
+          'input[placeholder*="link" i]'
+        ]);
+        if (linkInp && linkInp !== pInp && linkInp !== roleInp && (!linkInp.value || linkInp.value.trim().length === 0)) {
+          if (setNativeValue(linkInp, targetProj.link)) filled.push(`${prefix}-link`);
+        }
+
+        // 4. Dates
+        let dateInputs = [];
+        const dateLabels = Array.from(card.querySelectorAll("label, span, div, p")).filter(el => {
+          const t = (el.innerText || el.textContent || "").trim();
+          return /start\s*(&|and)\s*end\s*date|dates?/i.test(t);
+        });
+
+        if (dateLabels.length > 0) {
+          for (const dLbl of dateLabels) {
+            let container = dLbl.closest("div[class*='item' i], div[class*='field' i], div[class*='date' i], div[class*='picker' i]");
+            if (container && container !== card) {
+              const inps = Array.from(container.querySelectorAll("input:not([type='hidden'])")).filter(inp => isFillable(inp) && inp !== pInp && inp !== roleInp && inp !== linkInp);
+              if (inps.length >= 2) {
+                dateInputs = inps;
+                break;
+              }
+            }
+          }
+        }
+
+        if (dateInputs.length < 2) {
+          const placeholderDates = Array.from(card.querySelectorAll('input[placeholder*="YYYY" i], input[placeholder*="MM" i], input[placeholder*="Year" i], input[placeholder*="Date" i]'))
+            .filter(inp => isFillable(inp) && inp !== pInp && inp !== roleInp && inp !== linkInp);
+          if (placeholderDates.length >= 2) dateInputs = placeholderDates;
+        }
+
+        if (dateInputs.length < 2) {
+          const unused = Array.from(card.querySelectorAll("input:not([type='hidden']):not([type='checkbox']):not([type='radio'])"))
+            .filter(inp => isFillable(inp) && inp !== pInp && inp !== roleInp && inp !== linkInp);
+          if (unused.length >= 2) dateInputs = unused;
+        }
+
+        dateInputs = dateInputs.filter(inp => inp !== pInp && inp !== roleInp && inp !== linkInp);
+
+        if (dateInputs.length >= 2) {
+          const ph0 = dateInputs[0].placeholder || "";
+          const hasSlash = ph0.includes("/");
+          const separator = ph0.includes(" - ") ? " - " : (ph0.includes("-") ? "-" : " - ");
+
+          const startStr = hasSlash ? formatMMYYYY(targetProj.startMonth, targetProj.startYear) : formatYYYYMM(targetProj.startMonth, targetProj.startYear, separator);
+          const endStr = hasSlash ? formatMMYYYY(targetProj.endMonth, targetProj.endYear) : formatYYYYMM(targetProj.endMonth, targetProj.endYear, separator);
+
+          if (startStr && (!dateInputs[0].value || dateInputs[0].value.trim().length === 0)) {
+            if (setNativeDateValue(dateInputs[0], startStr)) filled.push(`${prefix}-startDate`);
+          }
+          if (endStr && (!dateInputs[1].value || dateInputs[1].value.trim().length === 0)) {
+            if (setNativeDateValue(dateInputs[1], endStr)) filled.push(`${prefix}-endDate`);
+          }
+        }
+
+        // 5. Description
+        const descInp = getInputByLabelOrSelector(card, /^(description|project\s*description|summary|responsibilities)$/i, [
+          "textarea"
+        ]);
+        if (descInp && (!descInp.value || descInp.value.trim().length === 0)) {
+          if (setNativeValue(descInp, targetProj.description)) filled.push(`${prefix}-description`);
+        }
+      }
+    });
+
+    return filled;
+  }
+
   function autofillTikTok(profile) {
     const filled = [];
 
@@ -1079,10 +1291,11 @@
       }
     });
 
-    // Run multi-experience & multi-education cards
+    // Run multi-experience, multi-education & multi-projects cards
     const expFilled = autofillMultiExperienceUniversal(profile);
     const eduFilled = autofillMultiEducationUniversal(profile);
-    filled.push(...expFilled, ...eduFilled);
+    const projFilled = autofillMultiProjectsUniversal(profile);
+    filled.push(...expFilled, ...eduFilled, ...projFilled);
 
     // Legal / Authorization / Sponsorship radios
     const radioContainers = document.querySelectorAll("div[class*='item'], div[class*='field'], fieldset, [role='radiogroup']");
@@ -1107,10 +1320,11 @@
   function autofillUniversal(profile) {
     const filled = [];
 
-    // 1. Process multi-card experience and education first with deduplication and section awareness
+    // 1. Process multi-card experience, education & projects first with deduplication and section awareness
     const expFilled = autofillMultiExperienceUniversal(profile);
     const eduFilled = autofillMultiEducationUniversal(profile);
-    filled.push(...expFilled, ...eduFilled);
+    const projFilled = autofillMultiProjectsUniversal(profile);
+    filled.push(...expFilled, ...eduFilled, ...projFilled);
 
     // 2. Definition of patterns for matching general applicant fields
     const patterns = [
