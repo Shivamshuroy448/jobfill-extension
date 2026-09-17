@@ -1379,6 +1379,7 @@ function updateUI(skipSync = false) {
   }
 
   currentJDAnalysis = analyzeJobDescription(jdText);
+  window.activeResume = activeResume;
 
   // Auto-detect company name if user has not manually edited one
   const companyInput = document.getElementById("company-input");
@@ -1843,10 +1844,11 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
 
   const companyInput = document.getElementById("company-input");
   const companyName = (companyInput ? companyInput.value.trim() : "") || "General";
+  const candidateName = activeResume.personal?.name || customResumeData?.name || "Shivamshu Roy";
 
   // 1. Sync skills and incorporate JD missing keywords
   if (!keepCurrentActiveResume) {
-    if (!currentJDAnalysis) currentJDAnalysis = analyzeJobDescription(jdText);
+    currentJDAnalysis = analyzeJobDescription(jdText);
     activeResume = syncAndOptimizeResume(currentJDAnalysis ? currentJDAnalysis.missing : [], jdText);
     updateUI(true); // Preserve activeResume
   }
@@ -1884,7 +1886,11 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
     try {
       const resp = await fetch(`http://127.0.0.1:4567/sync?company=${encodeURIComponent(companyName)}`, {
         method: "POST",
-        headers: { "Content-Type": "text/plain", "X-Company-Name": companyName },
+        headers: { 
+          "Content-Type": "text/plain", 
+          "X-Company-Name": companyName,
+          "X-Candidate-Name": candidateName
+        },
         body: fullLatex,
         signal: AbortSignal.timeout(24000)
       });
@@ -1963,11 +1969,12 @@ async function downloadResumePDF() {
 
   const companyInput = document.getElementById("company-input");
   const companyName = (companyInput ? companyInput.value.trim() : "") || "General";
+  const candidateName = activeResume.personal?.name || customResumeData?.name || "Shivamshu Roy";
 
   const jdInput = document.getElementById("jd-input");
   const jdText = jdInput ? jdInput.value : "";
   if (jdText && jdText.trim()) {
-    if (!currentJDAnalysis) currentJDAnalysis = analyzeJobDescription(jdText);
+    currentJDAnalysis = analyzeJobDescription(jdText);
     activeResume = syncAndOptimizeResume(currentJDAnalysis ? currentJDAnalysis.missing : [], jdText);
     updateUI(true);
   }
@@ -1984,7 +1991,11 @@ async function downloadResumePDF() {
       setBtnText(`<span>⏳</span><span>Syncing & Downloading via Bridge...</span>`);
       const resp = await fetch(`http://127.0.0.1:4567/sync?company=${encodeURIComponent(companyName)}`, {
         method: "POST",
-        headers: { "Content-Type": "text/plain", "X-Company-Name": companyName },
+        headers: { 
+          "Content-Type": "text/plain", 
+          "X-Company-Name": companyName,
+          "X-Candidate-Name": candidateName
+        },
         body: fullLatex,
         signal: AbortSignal.timeout(24000)
       });
@@ -2060,6 +2071,12 @@ function downloadTexFile() {
   URL.revokeObjectURL(url);
 }
 
+// Global window attachments for debugging and external automation
+window.updateUI = updateUI;
+window.pushToOverleaf = pushToOverleaf;
+window.downloadResumePDF = downloadResumePDF;
+window.generateLaTeX = generateLaTeX;
+window.activeResume = activeResume;
 
 document.addEventListener("DOMContentLoaded", () => {
   const jdInput = document.getElementById("jd-input");

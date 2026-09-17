@@ -25,27 +25,17 @@ DESKTOP_RESUMES_DIR = os.path.expanduser("~/Desktop/resumes")
 os.makedirs(DESKTOP_RESUMES_DIR, exist_ok=True)
 
 def inject_latex_and_recompile(latex_code):
-    """Inject LaTeX into Overleaf via direct JS (no Accessibility permission needed)"""
+    """Inject LaTeX into Overleaf tab: activate Chrome, focus editor, select all, paste via pbcopy + System Events, click Recompile"""
     import json as _json
-    latex_escaped = _json.dumps(latex_code)
-    inject_js = f"""(function() {{
-  var cm = document.querySelector('.cm-content');
-  if (!cm) return 'NO_CM';
-  cm.focus();
-  var sel = window.getSelection();
-  var range = document.createRange();
-  range.selectNodeContents(cm);
-  sel.removeAllRanges();
-  sel.addRange(range);
-  var ok = document.execCommand('insertText', false, {latex_escaped});
-  setTimeout(function() {{
-    var btn = Array.from(document.querySelectorAll('button')).find(function(b) {{
-      return b.innerText && b.innerText.includes('Recompile');
-    }}) || document.querySelector('button.compile-button, .btn-recompile');
-    if (btn) btn.click();
-  }}, 400);
-  return ok ? 'OK' : 'FAILED';
-}})()"""
+    # 1. Put the entire LaTeX on macOS system clipboard
+    proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+    proc.communicate(latex_code.encode("utf-8"))
+
+    focus_js = _json.dumps("(function() { var cm = document.querySelector('.cm-content'); if (cm) { cm.focus(); document.execCommand('selectAll'); } })()")
+    recompile_js = _json.dumps("(function() { var btn = Array.from(document.querySelectorAll('button')).find(function(b) { return b.innerText && b.innerText.includes('Recompile'); }) || document.querySelector('button.compile-button, .btn-recompile'); if (btn) btn.click(); })()")
+    check_cm_js = _json.dumps("(function() { return !!document.querySelector('.cm-content'); })()")
+
+    # 2. Activate Chrome, switch to Overleaf tab, focus .cm-content, select all, paste, click Recompile
     script = f"""tell application "Google Chrome"
   activate
   set found to false
@@ -56,8 +46,6 @@ def inject_latex_and_recompile(latex_code):
       if URL of aTab contains "overleaf.com/project" then
         set active tab index of aWindow to tabIdx
         set index of aWindow to 1
-        delay 0.3
-        execute aTab javascript {_json.dumps(inject_js)}
         set found to true
         exit repeat
       end if
@@ -71,30 +59,71 @@ def inject_latex_and_recompile(latex_code):
     repeat 20 times
       delay 1.0
       try
-        set checkCM to execute active tab of window 1 javascript "(function() {{ return !!document.querySelector('.cm-content'); }})()"
+        set checkCM to execute active tab of window 1 javascript {check_cm_js}
         if checkCM is "true" then exit repeat
       end try
     end repeat
-    delay 0.5
-    execute active tab of window 1 javascript {_json.dumps(inject_js)}
   end if
+  delay 0.3
+  execute active tab of window 1 javascript {focus_js}
+end tell
+delay 0.2
+tell application "System Events"
+  tell process "Google Chrome"
+    keystroke "a" using command down
+    delay 0.15
+    keystroke "v" using command down
+  end tell
+end tell
+delay 0.4
+tell application "Google Chrome"
+  execute active tab of window 1 javascript {recompile_js}
 end tell"""
     subprocess.run(["osascript", "-e", script], check=True)
 
 
 def trigger_overleaf_download():
-    """Trigger PDF download in Overleaf tab via navigation to download URL (guaranteed Chrome download)"""
-    script = """tell application "Google Chrome"
+    """Trigger PDF download in Overleaf tab after compilation completes"""
+    import json as _json
+    js_code = """(function() {
+  var recompileBtn = Array.from(document.querySelectorAll('button')).find(function(b) {
+    return b.innerText && b.innerText.includes('Recompile');
+  });
+  var isCompiling = recompileBtn && (recompileBtn.innerText.includes('Compiling') || recompileBtn.classList.contains('loading') || recompileBtn.getAttribute('aria-busy') === 'true');
+  if (isCompiling) return 'COMPILING';
+
+  var dl = document.querySelector('a[aria-label*=Download], a.pdf-toolbar-btn, a[href*=output]');
+  if (dl && dl.href) {
+    dl.click();
+    return 'DOWNLOAD_TRIGGERED';
+  }
+  return 'NO_DL';
+})()"""
+    js_escaped = _json.dumps(js_code)
+    script = f"""tell application "Google Chrome"
   repeat with aWindow in every window
     repeat with aTab in every tab of aWindow
       if URL of aTab contains "overleaf.com/project" then
-        execute aTab javascript "(function() { var dl = document.querySelector('a[aria-label*=\\"Download\\"], a.pdf-toolbar-btn, a[href*=\\"output.pdf\\"]'); if (dl && dl.href) { window.location.href = dl.href; return 'NAVIGATED'; } return 'NO_DL'; })()"
-        exit repeat
+        set dlRes to execute aTab javascript {js_escaped}
+        return dlRes
       end if
     end repeat
   end repeat
+  return "NO_TAB"
 end tell"""
-    subprocess.run(["osascript", "-e", script], check=True)
+    for _ in range(16):  # Poll up to 8 seconds
+        try:
+            res = subprocess.check_output(["osascript", "-e", script]).decode("utf-8").strip()
+            if res == "DOWNLOAD_TRIGGERED":
+                print("✓ Overleaf download triggered successfully!", flush=True)
+                return True
+            elif res == "COMPILING":
+                time.sleep(0.5)
+            else:
+                time.sleep(0.5)
+        except Exception:
+            time.sleep(0.5)
+    return False
 
 
 def notify_macos(title, message):
@@ -112,30 +141,6 @@ def get_downloads_pdf_set():
         if f.lower().endswith(".pdf")
     }
 
-def wait_for_downloaded_pdf(initial_set, timeout_sec=10):
-    start_time = time.time()
-    while time.time() - start_time < timeout_sec:
-        time.sleep(0.5)
-        if not os.path.exists(DOWNLOADS_DIR):
-            continue
-        current_files = os.listdir(DOWNLOADS_DIR)
-        
-        # Check if Chrome is actively downloading (.crdownload)
-        has_crdownload = any(f.endswith(".crdownload") for f in current_files)
-        if has_crdownload:
-            continue
-            
-        # Look for newly appeared PDF or recently modified PDF
-        for f in current_files:
-            if not f.lower().endswith(".pdf"):
-                continue
-            path = os.path.join(DOWNLOADS_DIR, f)
-            mtime = os.path.getmtime(path)
-            if f not in initial_set or (mtime >= start_time - 1.0):
-                if os.path.getsize(path) > 1000:
-                    return path
-    return None
-
 import re
 
 CURRENT_TARGET_COMPANY = "General"
@@ -146,6 +151,13 @@ def sanitize_company_name(name):
     cleaned = re.sub(r'[^a-zA-Z0-9_\- ]', '', name.strip())
     cleaned = cleaned.replace(' ', '_')
     return cleaned if cleaned else "General"
+
+def sanitize_candidate_name(name):
+    if not name or not name.strip():
+        return "Shivamshu_Roy"
+    cleaned = re.sub(r'[^a-zA-Z0-9_\- ]', '', name.strip())
+    cleaned = cleaned.replace(' ', '_')
+    return cleaned if cleaned else "Shivamshu_Roy"
 
 def wait_for_downloaded_pdf(initial_set, timeout_sec=14):
     start_time = time.time()
@@ -171,24 +183,23 @@ def wait_for_downloaded_pdf(initial_set, timeout_sec=14):
                     return path
     return None
 
-def process_downloaded_pdf(src_path, target_company=None):
+def process_downloaded_pdf(src_path, target_company=None, candidate_name=None):
     global CURRENT_TARGET_COMPANY
     company = sanitize_company_name(target_company or CURRENT_TARGET_COMPANY)
+    cand_name = sanitize_candidate_name(candidate_name)
     try:
         company_dir = os.path.join(DESKTOP_RESUMES_DIR, company)
         os.makedirs(company_dir, exist_ok=True)
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        company_dest = os.path.join(company_dir, "Shivamshu_Roy_Resume.pdf")
-        company_archive = os.path.join(company_dir, f"Shivamshu_Roy_Resume_{ts}.pdf")
-        top_dest = os.path.join(DESKTOP_RESUMES_DIR, "Shivamshu_Roy_Resume.pdf")
+        company_dest = os.path.join(company_dir, f"{cand_name}_Resume.pdf")
+        company_archive = os.path.join(company_dir, f"{cand_name}_Resume_{ts}.pdf")
+        top_dest = os.path.join(DESKTOP_RESUMES_DIR, f"{cand_name}_Resume.pdf")
         
-        # Save clean Shivamshu_Roy_Resume.pdf and archive into company folder
+        # Save clean resume and archive into company folder
         shutil.copy2(src_path, company_dest)
         shutil.copy2(src_path, company_archive)
         shutil.copy2(src_path, top_dest)
-        
-        # Keep original file in ~/Downloads intact (do not delete)
             
         print(f"✓ Saved resume to: {company_dest}", flush=True)
         notify_macos("ResumeSync AI", f"Saved resume to Desktop/resumes/{company}/")
@@ -229,7 +240,7 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
     def _send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Company-Name")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Company-Name, X-Candidate-Name")
         self.send_header("Access-Control-Allow-Private-Network", "true")
 
     def do_OPTIONS(self):
@@ -262,7 +273,9 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         global CURRENT_TARGET_COMPANY
-        if self.path.startswith("/company"):
+        base_path = self.path.split("?")[0]
+
+        if base_path.startswith("/company"):
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else ""
             comp_name = ""
@@ -297,7 +310,7 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
             }).encode("utf-8"))
             return
 
-        if self.path.startswith("/open-folder"):
+        if base_path.startswith("/open-folder"):
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else ""
             comp_name = ""
@@ -322,18 +335,23 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
             }).encode("utf-8"))
             return
 
-        if self.path in ["/sync", "/download"]:
+        if base_path in ["/sync", "/download"]:
             try:
                 content_length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else ""
                 
                 raw_company = self.headers.get("X-Company-Name", "").strip()
-                if not raw_company and "?" in self.path:
+                raw_candidate = self.headers.get("X-Candidate-Name", "").strip()
+                if "?" in self.path:
                     import urllib.parse
                     qs = urllib.parse.parse_qs(self.path.split("?", 1)[1])
-                    raw_company = qs.get("company", [""])[0]
+                    if not raw_company:
+                        raw_company = qs.get("company", [""])[0]
+                    if not raw_candidate:
+                        raw_candidate = qs.get("candidate", [""])[0]
 
                 target_company = sanitize_company_name(raw_company or CURRENT_TARGET_COMPANY)
+                target_candidate = sanitize_candidate_name(raw_candidate)
                 CURRENT_TARGET_COMPANY = target_company
 
                 company_dir = os.path.join(DESKTOP_RESUMES_DIR, target_company)
@@ -347,10 +365,10 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
                 # 1. If LaTeX body provided, save .tex file to company folder + top-level
                 if body and len(body) > 100:
                     try:
-                        tex_company = os.path.join(company_dir, "Shivamshu_Roy_Resume.tex")
+                        tex_company = os.path.join(company_dir, f"{target_candidate}_Resume.tex")
                         with open(tex_company, "w", encoding="utf-8") as tf:
                             tf.write(body)
-                        tex_top = os.path.join(DESKTOP_RESUMES_DIR, "Shivamshu_Roy_Resume.tex")
+                        tex_top = os.path.join(DESKTOP_RESUMES_DIR, f"{target_candidate}_Resume.tex")
                         with open(tex_top, "w", encoding="utf-8") as tf:
                             tf.write(body)
                     except Exception as e:
@@ -363,21 +381,21 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
                     except Exception:
                         pass
 
-                    # Inject LaTeX into Overleaf and recompile using JS injection (no Accessibility needed)
+                    # Inject LaTeX into Overleaf and recompile
                     inject_latex_and_recompile(body)
 
-                    # Wait 3.5s for Overleaf to finish recompilation
-                    time.sleep(3.5)
+                    # Wait for Overleaf compilation to begin
+                    time.sleep(1.0)
 
                 # 2. Trigger download via JS navigation
                 initial_pdfs = get_downloads_pdf_set()
                 trigger_overleaf_download()
 
                 # 3. Wait for downloaded PDF and move to company folder
-                downloaded_file = wait_for_downloaded_pdf(initial_pdfs, timeout_sec=12)
+                downloaded_file = wait_for_downloaded_pdf(initial_pdfs, timeout_sec=14)
                 dest_path = None
                 if downloaded_file:
-                    dest_path = process_downloaded_pdf(downloaded_file, target_company=target_company)
+                    dest_path = process_downloaded_pdf(downloaded_file, target_company=target_company, candidate_name=target_candidate)
 
                 self.send_response(200)
                 self._send_cors_headers()
@@ -388,7 +406,7 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
                     "downloaded": bool(dest_path),
                     "company": target_company,
                     "folder": company_dir,
-                    "filePath": dest_path or os.path.join(company_dir, "Shivamshu_Roy_Resume.pdf"),
+                    "filePath": dest_path or os.path.join(company_dir, f"{target_candidate}_Resume.pdf"),
                     "message": f"Pushed to Overleaf & saved to {company_dir}!"
                 }).encode("utf-8"))
             except Exception as e:
