@@ -1882,7 +1882,7 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
   // 4. PRIMARY: Try local bridge (localhost:4567/sync)
   if (await isBridgeRunning()) {
     try {
-      const resp = await fetch("http://127.0.0.1:4567/sync", {
+      const resp = await fetch(`http://127.0.0.1:4567/sync?company=${encodeURIComponent(companyName)}`, {
         method: "POST",
         headers: { "Content-Type": "text/plain", "X-Company-Name": companyName },
         body: fullLatex,
@@ -1982,7 +1982,7 @@ async function downloadResumePDF() {
   if (await isBridgeRunning()) {
     try {
       setBtnText(`<span>⏳</span><span>Syncing & Downloading via Bridge...</span>`);
-      const resp = await fetch("http://127.0.0.1:4567/sync", {
+      const resp = await fetch(`http://127.0.0.1:4567/sync?company=${encodeURIComponent(companyName)}`, {
         method: "POST",
         headers: { "Content-Type": "text/plain", "X-Company-Name": companyName },
         body: fullLatex,
