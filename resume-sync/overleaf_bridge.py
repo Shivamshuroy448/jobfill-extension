@@ -25,59 +25,51 @@ DESKTOP_RESUMES_DIR = os.path.expanduser("~/Desktop/resumes")
 os.makedirs(DESKTOP_RESUMES_DIR, exist_ok=True)
 
 def inject_latex_and_recompile(latex_code):
-    """Inject LaTeX into Overleaf tab: activate Chrome, focus editor, select all, paste via pbcopy + System Events, click Recompile"""
+    """Inject LaTeX into Overleaf tab: activate Chrome, focus editor, select all, insertText, click Recompile"""
     import json as _json
     # 1. Put the entire LaTeX on macOS system clipboard
     proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
     proc.communicate(latex_code.encode("utf-8"))
 
-    focus_js = _json.dumps("(function() { var cm = document.querySelector('.cm-content'); if (cm) { cm.focus(); document.execCommand('selectAll'); } })()")
-    recompile_js = _json.dumps("(function() { var btn = Array.from(document.querySelectorAll('button')).find(function(b) { return b.innerText && b.innerText.includes('Recompile'); }) || document.querySelector('button.compile-button, .btn-recompile'); if (btn) btn.click(); })()")
-    check_cm_js = _json.dumps("(function() { return !!document.querySelector('.cm-content'); })()")
+    latex_escaped = _json.dumps(latex_code)
 
-    # 2. Activate Chrome, switch to Overleaf tab, focus .cm-content, select all, paste, click Recompile
+    inject_js = f"""(function() {{
+  var cm = document.querySelector(".cm-content");
+  if (!cm) return "NO_CM";
+  cm.focus();
+  document.execCommand("selectAll");
+  var ok = document.execCommand("insertText", false, {latex_escaped});
+  setTimeout(function() {{
+    var btn = Array.from(document.querySelectorAll("button")).find(function(b) {{
+      return b.innerText && b.innerText.includes("Recompile");
+    }}) || document.querySelector("button.compile-button, .btn-recompile");
+    if (btn) btn.click();
+  }}, 400);
+  return ok ? "OK" : "FAILED";
+}})()"""
+
+    inject_escaped = _json.dumps(inject_js)
+
     script = f"""tell application "Google Chrome"
-  activate
-  set found to false
-  repeat with aWindow in every window
-    set tabIdx to 0
-    repeat with aTab in every tab of aWindow
-      set tabIdx to tabIdx + 1
-      if URL of aTab contains "overleaf.com/project" then
-        set active tab index of aWindow to tabIdx
-        set index of aWindow to 1
-        set found to true
-        exit repeat
+  repeat with w from 1 to (count of windows)
+    repeat with t from 1 to (count of tabs of window w)
+      if (URL of tab t of window w) contains "overleaf.com/project" then
+        return execute tab t of window w javascript {inject_escaped}
       end if
     end repeat
-    if found then exit repeat
   end repeat
-  if not found then
-    tell window 1
-      make new tab with properties {{URL:"https://www.overleaf.com/project/69787f4c07ea46326eb8587e"}}
-    end tell
-    repeat 20 times
-      delay 1.0
-      try
-        set checkCM to execute active tab of window 1 javascript {check_cm_js}
-        if checkCM is "true" then exit repeat
-      end try
-    end repeat
-  end if
-  delay 0.3
-  execute active tab of window 1 javascript {focus_js}
-end tell
-delay 0.2
-tell application "System Events"
-  tell process "Google Chrome"
-    keystroke "a" using command down
-    delay 0.15
-    keystroke "v" using command down
+  tell window 1
+    make new tab with properties {{URL:"https://www.overleaf.com/project/69787f4c07ea46326eb8587e"}}
   end tell
-end tell
-delay 0.4
-tell application "Google Chrome"
-  execute active tab of window 1 javascript {recompile_js}
+  repeat 20 times
+    delay 1.0
+    try
+      set checkCM to execute active tab of window 1 javascript "(function() {{ return !!document.querySelector('.cm-content'); }})()"
+      if checkCM is "true" then exit repeat
+    end try
+  end repeat
+  delay 0.5
+  return execute active tab of window 1 javascript {inject_escaped}
 end tell"""
     subprocess.run(["osascript", "-e", script], check=True)
 
@@ -86,26 +78,25 @@ def trigger_overleaf_download():
     """Trigger PDF download in Overleaf tab after compilation completes"""
     import json as _json
     js_code = """(function() {
-  var recompileBtn = Array.from(document.querySelectorAll('button')).find(function(b) {
-    return b.innerText && b.innerText.includes('Recompile');
+  var recompileBtn = Array.from(document.querySelectorAll("button")).find(function(b) {
+    return b.innerText && b.innerText.includes("Recompile");
   });
-  var isCompiling = recompileBtn && (recompileBtn.innerText.includes('Compiling') || recompileBtn.classList.contains('loading') || recompileBtn.getAttribute('aria-busy') === 'true');
-  if (isCompiling) return 'COMPILING';
+  var isCompiling = recompileBtn && (recompileBtn.innerText.includes("Compiling") || recompileBtn.classList.contains("loading") || recompileBtn.getAttribute("aria-busy") === "true");
+  if (isCompiling) return "COMPILING";
 
-  var dl = document.querySelector('a[aria-label*=Download], a.pdf-toolbar-btn, a[href*=output]');
+  var dl = document.querySelector("a[aria-label*=Download], a.pdf-toolbar-btn, a[href*=output]");
   if (dl && dl.href) {
-    dl.click();
-    return 'DOWNLOAD_TRIGGERED';
+    window.location.href = dl.href;
+    return "DOWNLOAD_TRIGGERED";
   }
-  return 'NO_DL';
+  return "NO_DL";
 })()"""
     js_escaped = _json.dumps(js_code)
     script = f"""tell application "Google Chrome"
-  repeat with aWindow in every window
-    repeat with aTab in every tab of aWindow
-      if URL of aTab contains "overleaf.com/project" then
-        set dlRes to execute aTab javascript {js_escaped}
-        return dlRes
+  repeat with w from 1 to (count of windows)
+    repeat with t from 1 to (count of tabs of window w)
+      if (URL of tab t of window w) contains "overleaf.com/project" then
+        return execute tab t of window w javascript {js_escaped}
       end if
     end repeat
   end repeat
