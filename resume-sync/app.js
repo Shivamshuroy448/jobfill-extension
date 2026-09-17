@@ -1241,6 +1241,16 @@ function updateUI() {
   if (jdText && jdText.trim()) {
     // 1-Click dynamic synchronization: tailors skills & reorders/rephrases projects to JD
     activeResume = syncAndOptimizeResume([], jdText);
+  } else if (isCustomResume && customResumeData) {
+    activeResume = {
+      personal: { name: customResumeData.name, line1: "", line2: "" },
+      skills: JSON.parse(JSON.stringify(customResumeData.skills || [])),
+      education: EXACT_BASE_RESUME.education,
+      experience: EXACT_BASE_RESUME.experience,
+      research: EXACT_BASE_RESUME.research,
+      projects: EXACT_BASE_RESUME.projects,
+      rawText: customResumeData.rawText
+    };
   } else {
     activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
   }
