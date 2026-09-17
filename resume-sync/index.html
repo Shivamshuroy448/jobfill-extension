@@ -168,8 +168,19 @@
         </div>
       </section>
 
-      <!-- Right Panel: Direct LaTeX Code View -->
+      <!-- Right Panel: Tailored Skills & Direct LaTeX Code View -->
       <section class="panel panel-right">
+        <!-- View Toggle Tabs -->
+        <div class="right-panel-tabs">
+          <button type="button" id="tab-btn-skills" class="view-tab-btn active">
+            <span>🎯 Tailored Technical Skills</span>
+            <span id="tab-skills-count" class="view-tab-badge">6 Categories</span>
+          </button>
+          <button type="button" id="tab-btn-latex" class="view-tab-btn">
+            <span>📄 Full LaTeX Code (roy.tex)</span>
+          </button>
+        </div>
+
         <div class="latex-toolbar">
           <div class="latex-title-wrap">
             <span class="latex-badge">LATEX</span>
@@ -179,13 +190,29 @@
           <div class="toolbar-actions">
             <button id="btn-download-tex" class="btn btn-small btn-secondary">💾 Save .tex</button>
             <button id="btn-copy-latex" class="btn btn-small btn-primary">📋 Copy All LaTeX</button>
-            <button id="btn-copy-skills" class="btn btn-small btn-secondary">📋 Copy Skills Block Only</button>
+            <button id="btn-copy-skills" class="btn btn-small btn-secondary">📋 Copy Skills Block</button>
             <button id="btn-reset-resume" class="btn btn-small btn-secondary">🔄 Reset Original</button>
           </div>
         </div>
 
-        <!-- Direct LaTeX Editor Area -->
-        <div class="latex-editor-container">
+        <!-- Tab View 1: Live Tailored Technical Skills Display -->
+        <div id="view-skills" class="skills-preview-container">
+          <div class="skills-preview-header">
+            <div>
+              <div class="skills-preview-title">🎯 Live Tailored Skills Preview</div>
+              <div id="skills-target-subtitle" class="skills-preview-sub">Automatically optimized &amp; reordered for target job description</div>
+            </div>
+            <button type="button" id="btn-copy-skills-card" class="btn btn-small btn-secondary">
+              📋 Copy Skills Block
+            </button>
+          </div>
+          <div id="skills-categories-list" class="skills-categories-list">
+            <!-- Dynamically populated categories -->
+          </div>
+        </div>
+
+        <!-- Tab View 2: Direct LaTeX Editor Area -->
+        <div id="view-latex" class="latex-editor-container" style="display: none;">
           <textarea id="latex-output" spellcheck="false" class="code-editor"></textarea>
         </div>
       </section>
