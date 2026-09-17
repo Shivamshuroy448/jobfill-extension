@@ -1220,28 +1220,42 @@ function debouncedNotifyBridge(company) {
   }, 400);
 }
 
-function saveTargetCompany(company) {
+async function saveTargetCompany(company) {
   if (!company || company.toLowerCase() === "general") return;
   try {
     const list = JSON.parse(localStorage.getItem("resumesync_companies") || "[]");
     if (!list.includes(company)) {
       list.unshift(company);
-      localStorage.setItem("resumesync_companies", JSON.stringify(list.slice(0, 10)));
+      localStorage.setItem("resumesync_companies", JSON.stringify(list.slice(0, 15)));
     }
   } catch (e) {}
-  renderTargetCompanies();
+
+  // Create folder immediately via bridge
+  try {
+    await fetch("http://127.0.0.1:4567/company", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ company })
+    });
+  } catch (e) {}
+
+  fetchExistingFolders();
 }
 
-function renderTargetCompanies() {
+function renderTargetCompanies(externalList = null) {
   try {
-    const list = JSON.parse(localStorage.getItem("resumesync_companies") || "[]");
+    let list = externalList;
+    if (!list) {
+      list = JSON.parse(localStorage.getItem("resumesync_companies") || "[]");
+    }
     const sec = document.getElementById("existing-folders-section");
     const container = document.getElementById("existing-folders-list");
     if (sec && container) {
-      if (list.length > 0) {
+      const cleanList = (list || []).filter(c => c && c.toLowerCase() !== "general");
+      if (cleanList.length > 0) {
         sec.style.display = "block";
-        container.innerHTML = list.map(c => `
-          <button type="button" class="company-chip chip-existing" data-company="${c}">🏢 ${c}</button>
+        container.innerHTML = cleanList.map(c => `
+          <button type="button" class="company-chip chip-existing" data-company="${c}">📁 ${c}</button>
         `).join("");
         container.querySelectorAll(".company-chip").forEach(btn => {
           btn.addEventListener("click", () => {
@@ -1255,13 +1269,38 @@ function renderTargetCompanies() {
   } catch (e) {}
 }
 
-function openFolderInFinder() {
+async function openFolderInFinder() {
   const companyInput = document.getElementById("company-input");
   const company = (companyInput ? companyInput.value.trim() : "") || "General";
-  alert(`Target employer: ${company}\n\nDownloaded files from Chrome are saved directly to your Downloads folder without any background daemons.`);
+
+  try {
+    const resp = await fetch("http://127.0.0.1:4567/open-folder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ company })
+    });
+    if (resp.ok) {
+      showToastFeedback(`📂 Opened <strong>Desktop/resumes/${company}/</strong> in Finder!`);
+      fetchExistingFolders();
+      return;
+    }
+  } catch (e) {}
+
+  showToastFeedback(`📁 Resumes folder: <strong>Desktop/resumes/${company}/</strong>`);
 }
 
-function fetchExistingFolders() {
+async function fetchExistingFolders() {
+  try {
+    const resp = await fetch("http://127.0.0.1:4567/", { method: "GET", signal: AbortSignal.timeout(1200) });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.companies && Array.isArray(data.companies) && data.companies.length > 0) {
+        renderTargetCompanies(data.companies);
+        return;
+      }
+    }
+  } catch (e) {}
+
   renderTargetCompanies();
 }
 

@@ -237,15 +237,8 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
             if os.path.exists(DESKTOP_RESUMES_DIR):
                 for d in os.listdir(DESKTOP_RESUMES_DIR):
                     p = os.path.join(DESKTOP_RESUMES_DIR, d)
-                    if os.path.isdir(p):
-                        # Clean up if empty
-                        if not os.listdir(p):
-                            try:
-                                os.rmdir(p)
-                            except OSError:
-                                pass
-                        else:
-                            companies.append(d)
+                    if os.path.isdir(p) and not d.startswith("."):
+                        companies.append(d)
         except Exception as e:
             print(f"Notice reading resumes directory: {e}", flush=True)
 
@@ -277,7 +270,11 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
             target_company = sanitize_company_name(comp_name)
             CURRENT_TARGET_COMPANY = target_company
             company_dir = os.path.join(DESKTOP_RESUMES_DIR, target_company)
-            # NOTE: Do NOT create empty directory here! Folder will only be created when a file is actually saved.
+            if target_company and target_company.lower() != "general":
+                try:
+                    os.makedirs(company_dir, exist_ok=True)
+                except Exception as e:
+                    print(f"Error creating company dir {company_dir}: {e}", flush=True)
             
             self.send_response(200)
             self._send_cors_headers()
