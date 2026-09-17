@@ -39,7 +39,9 @@ def inject_latex_and_recompile(latex_code):
   sel.addRange(range);
   var ok = document.execCommand('insertText', false, {latex_escaped});
   setTimeout(function() {{
-    var btn = document.querySelector('button.compile-button');
+    var btn = Array.from(document.querySelectorAll('button')).find(function(b) {{
+      return b.innerText && b.innerText.includes('Recompile');
+    }}) || document.querySelector('button.compile-button, .btn-recompile');
     if (btn) btn.click();
   }}, 400);
   return ok ? 'OK' : 'FAILED';
@@ -51,7 +53,7 @@ def inject_latex_and_recompile(latex_code):
     set tabIdx to 0
     repeat with aTab in every tab of aWindow
       set tabIdx to tabIdx + 1
-      if URL of aTab contains "overleaf.com/project/69787f4c07ea46326eb8587e" then
+      if URL of aTab contains "overleaf.com/project" then
         set active tab index of aWindow to tabIdx
         set index of aWindow to 1
         delay 0.3
@@ -63,11 +65,18 @@ def inject_latex_and_recompile(latex_code):
     if found then exit repeat
   end repeat
   if not found then
-    tell front window
+    tell window 1
       make new tab with properties {{URL:"https://www.overleaf.com/project/69787f4c07ea46326eb8587e"}}
     end tell
-    delay 3.5
-    execute active tab of front window javascript {_json.dumps(inject_js)}
+    repeat 20 times
+      delay 1.0
+      try
+        set checkCM to execute active tab of window 1 javascript "(function() {{ return !!document.querySelector('.cm-content'); }})()"
+        if checkCM is "true" then exit repeat
+      end try
+    end repeat
+    delay 0.5
+    execute active tab of window 1 javascript {_json.dumps(inject_js)}
   end if
 end tell"""
     subprocess.run(["osascript", "-e", script], check=True)
@@ -78,8 +87,8 @@ def trigger_overleaf_download():
     script = """tell application "Google Chrome"
   repeat with aWindow in every window
     repeat with aTab in every tab of aWindow
-      if URL of aTab contains "overleaf.com/project/69787f4c07ea46326eb8587e" then
-        execute aTab javascript "(function() { var dl = document.querySelector('a[aria-label=\\"Download PDF\\"]'); if (dl) { window.location.href = dl.href; return 'NAVIGATED'; } return 'NO_DL'; })()"
+      if URL of aTab contains "overleaf.com/project" then
+        execute aTab javascript "(function() { var dl = document.querySelector('a[aria-label*=\\"Download\\"], a.pdf-toolbar-btn, a[href*=\\"output.pdf\\"]'); if (dl && dl.href) { window.location.href = dl.href; return 'NAVIGATED'; } return 'NO_DL'; })()"
         exit repeat
       end if
     end repeat
@@ -138,7 +147,7 @@ def sanitize_company_name(name):
     cleaned = cleaned.replace(' ', '_')
     return cleaned if cleaned else "General"
 
-def wait_for_downloaded_pdf(initial_set, timeout_sec=10):
+def wait_for_downloaded_pdf(initial_set, timeout_sec=14):
     start_time = time.time()
     while time.time() - start_time < timeout_sec:
         time.sleep(0.5)
@@ -146,8 +155,8 @@ def wait_for_downloaded_pdf(initial_set, timeout_sec=10):
             continue
         current_files = os.listdir(DOWNLOADS_DIR)
         
-        # Check if Chrome is actively downloading (.crdownload)
-        has_crdownload = any(f.endswith(".crdownload") for f in current_files)
+        # Check if Chrome is actively downloading (.crdownload or temporary file)
+        has_crdownload = any(f.endswith(".crdownload") or f.startswith(".com.google.Chrome") for f in current_files)
         if has_crdownload:
             continue
             

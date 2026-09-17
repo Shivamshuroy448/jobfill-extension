@@ -116,6 +116,7 @@ function getOverleafUrl() {
 
 // Keyword Dictionary
 const KEYWORD_DICTIONARY = [
+  // Degrees & Foundations
   { phrase: "Master's degree", key: "master" },
   { phrase: "Bachelor's degree", key: "bachelor" },
   { phrase: "Data Science", key: "data science" },
@@ -124,16 +125,102 @@ const KEYWORD_DICTIONARY = [
   { phrase: "Mathematics", key: "mathematics" },
   { phrase: "Analytics", key: "analytics" },
   { phrase: "Actuarial Science", key: "actuarial" },
-  { phrase: "SQL", key: "sql" },
+
+  // Core Languages
   { phrase: "Python", key: "python" },
+  { phrase: "SQL", key: "sql" },
   { phrase: "R", key: " r " },
+  { phrase: "Java", key: "java" },
+  { phrase: "C++", key: "c++" },
+  { phrase: "C#", key: "c#" },
+  { phrase: "JavaScript", key: "javascript" },
+  { phrase: "TypeScript", key: "typescript" },
+  { phrase: "Go / Golang", key: "golang" },
+  { phrase: "Rust", key: "rust" },
+  { phrase: "Scala", key: "scala" },
+  { phrase: "Kotlin", key: "kotlin" },
+  { phrase: "Bash / Shell", key: "bash" },
+  { phrase: "Julia", key: "julia" },
+  { phrase: "HTML/CSS", key: "html" },
+
+  // Machine Learning & AI
+  { phrase: "PyTorch", key: "pytorch" },
+  { phrase: "TensorFlow", key: "tensorflow" },
+  { phrase: "Keras", key: "keras" },
+  { phrase: "Scikit-Learn", key: "scikit" },
+  { phrase: "XGBoost", key: "xgboost" },
+  { phrase: "LightGBM", key: "lightgbm" },
+  { phrase: "Machine Learning", key: "machine learning" },
+  { phrase: "Deep Learning", key: "deep learning" },
+  { phrase: "Natural Language Processing (NLP)", key: "nlp" },
+  { phrase: "Large Language Models (LLMs)", key: "llm" },
+  { phrase: "Generative AI", key: "generative ai" },
+  { phrase: "Computer Vision", key: "computer vision" },
+  { phrase: "OpenCV", key: "opencv" },
+  { phrase: "Hugging Face", key: "hugging face" },
+  { phrase: "Transformers", key: "transformers" },
+  { phrase: "LangChain", key: "langchain" },
+  { phrase: "spaCy", key: "spacy" },
+  { phrase: "NLTK", key: "nltk" },
+  { phrase: "Pandas", key: "pandas" },
+  { phrase: "NumPy", key: "numpy" },
+  { phrase: "time-series forecasting", key: "time-series" },
+  { phrase: "predictive modeling", key: "predictive modeling" },
+
+  // Data Engineering & Cloud
+  { phrase: "AWS", key: "aws" },
+  { phrase: "GCP (Google Cloud)", key: "gcp" },
+  { phrase: "Microsoft Azure", key: "azure" },
+  { phrase: "Snowflake", key: "snowflake" },
+  { phrase: "Databricks", key: "databricks" },
+  { phrase: "Apache Spark", key: "spark" },
+  { phrase: "PySpark", key: "pyspark" },
+  { phrase: "Apache Kafka", key: "kafka" },
+  { phrase: "Apache Airflow", key: "airflow" },
+  { phrase: "dbt", key: "dbt" },
+  { phrase: "Docker", key: "docker" },
+  { phrase: "Kubernetes", key: "kubernetes" },
+  { phrase: "Terraform", key: "terraform" },
+  { phrase: "CI/CD", key: "ci/cd" },
+  { phrase: "FastAPI", key: "fastapi" },
+  { phrase: "Flask", key: "flask" },
+  { phrase: "PostgreSQL", key: "postgresql" },
+  { phrase: "MySQL", key: "mysql" },
+  { phrase: "BigQuery", key: "bigquery" },
+  { phrase: "MongoDB", key: "mongodb" },
+  { phrase: "Redis", key: "redis" },
+  { phrase: "GraphQL", key: "graphql" },
+  { phrase: "REST APIs", key: "rest api" },
+  { phrase: "ETL Pipelines", key: "etl" },
+  { phrase: "Data Warehousing", key: "data warehouse" },
+
+  // Analytics & BI
   { phrase: "Power BI", key: "power bi" },
   { phrase: "Tableau", key: "tableau" },
-  { phrase: "BigQuery", key: "bigquery" },
+  { phrase: "Looker", key: "looker" },
+  { phrase: "Excel", key: "excel" },
+  { phrase: "Git / GitHub", key: "git" },
+  { phrase: "Linux", key: "linux" },
+  { phrase: "Jupyter", key: "jupyter" },
   { phrase: "statistical methods", key: "statistical methods" },
   { phrase: "data analysis techniques", key: "data analysis techniques" },
   { phrase: "data analysis", key: "data analysis" },
   { phrase: "data visualization", key: "data visualization" },
+  { phrase: "A/B Testing", key: "a/b test" },
+  { phrase: "telemetry", key: "telemetry" },
+
+  // Domain & Life Sciences
+  { phrase: "Bioinformatics", key: "bioinformatics" },
+  { phrase: "Genomics", key: "genomic" },
+  { phrase: "Life Sciences", key: "life science" },
+  { phrase: "Next-Generation Sequencing", key: "sequencing" },
+  { phrase: "Data Harmonization", key: "harmonization" },
+  { phrase: "Precision Oncology", key: "oncology" },
+  { phrase: "imputation / data hygiene", key: "imputation" },
+  { phrase: "anomaly detection", key: "anomaly detection" },
+  { phrase: "HIPAA / privacy governance", key: "hipaa" },
+
+  // Competencies & Soft Skills
   { phrase: "analytical and problem-solving skills", key: "analytical and problem-solving" },
   { phrase: "problem-solving skills", key: "problem-solving" },
   { phrase: "attention to detail", key: "attention to detail" },
@@ -143,20 +230,8 @@ const KEYWORD_DICTIONARY = [
   { phrase: "team environment", key: "team environment" },
   { phrase: "work independently", key: "work independently" },
   { phrase: "passion for working with data", key: "passion for working with data" },
-  { phrase: "imputation / data hygiene", key: "imputation" },
-  { phrase: "anomaly detection", key: "anomaly detection" },
-  { phrase: "HIPAA / privacy governance", key: "hipaa" },
-  { phrase: "time-series forecasting", key: "time-series" },
-  { phrase: "predictive modeling", key: "predictive modeling" },
-  { phrase: "telemetry", key: "telemetry" },
-  { phrase: "Bioinformatics", key: "bioinformatics" },
-  { phrase: "Genomics", key: "genomic" },
-  { phrase: "Life Sciences", key: "life science" },
-  { phrase: "Next-Generation Sequencing", key: "sequencing" },
-  { phrase: "Data Harmonization", key: "harmonization" },
   { phrase: "Agile Setting", key: "agile" },
-  { phrase: "Technical Documentation", key: "technical documentation" },
-  { phrase: "Precision Oncology", key: "oncology" }
+  { phrase: "Technical Documentation", key: "technical documentation" }
 ];
 
 const SAMPLE_JDS = [
@@ -522,14 +597,28 @@ function syncAndOptimizeResume(missingKeywords, jdText) {
     });
 
     if (missingKeywords && missingKeywords.length > 0) {
-      const targetCat = synced.skills.find(s => /skill|tech|tool|lang/i.test(s.label)) || synced.skills[0];
-      if (targetCat) {
-        const currentVal = targetCat.value.toLowerCase();
-        const toAdd = missingKeywords.slice(0, 4).filter(k => !currentVal.includes(k.toLowerCase()));
-        if (toAdd.length > 0) {
-          targetCat.value = `${targetCat.value}, ${toAdd.join(", ")}`;
+      missingKeywords.forEach(kw => {
+        const lowerKw = kw.toLowerCase();
+        const exists = synced.skills.some(cat => (cat.value || "").toLowerCase().includes(lowerKw));
+        if (exists) return;
+
+        let targetCat = null;
+        if (/\b(python|sql|r|java|c\+\+|javascript|typescript|go|rust|scala|kotlin|bash|shell|julia)\b/i.test(lowerKw)) {
+          targetCat = synced.skills.find(s => /lang/i.test(s.label));
+        } else if (/\b(pytorch|tensorflow|scikit|ml|deep learning|nlp|ai|vision|transformers|llm)\b/i.test(lowerKw)) {
+          targetCat = synced.skills.find(s => /ml|machine|ai|model/i.test(s.label));
+        } else if (/\b(aws|gcp|azure|cloud|snowflake|spark|kafka|airflow|databricks|docker|kubernetes|sql|database|etl|pipeline)\b/i.test(lowerKw)) {
+          targetCat = synced.skills.find(s => /cloud|data|infra|database/i.test(s.label));
+        } else if (/\b(tableau|power bi|git|tool|linux|excel|analytics|bi)\b/i.test(lowerKw)) {
+          targetCat = synced.skills.find(s => /tool|analytic|platform/i.test(s.label));
         }
-      }
+        if (!targetCat) {
+          targetCat = synced.skills.find(s => /skill|tech|tool|lang/i.test(s.label)) || synced.skills[0];
+        }
+        if (targetCat) {
+          targetCat.value = `${targetCat.value}, ${kw}`;
+        }
+      });
     }
 
     return synced;
@@ -761,6 +850,36 @@ function syncAndOptimizeResume(missingKeywords, jdText) {
     }
   } else if (compEntry) {
     synced.skills = synced.skills.filter(s => s.label !== "Core Competencies");
+  }
+  // Integrate any missing keywords from the JD into matching skills categories
+  if (missingKeywords && missingKeywords.length > 0) {
+    missingKeywords.forEach(kw => {
+      const lowerKw = kw.toLowerCase();
+      const exists = synced.skills.some(cat => (cat.value || "").toLowerCase().includes(lowerKw));
+      if (exists) return;
+
+      if (/\b(python|sql|r|java|c\+\+|c#|javascript|typescript|go|golang|rust|scala|kotlin|ruby|swift|bash|shell|php|matlab|julia)\b/i.test(lowerKw)) {
+        const langEntry = synced.skills.find(s => s.label === "Languages");
+        if (langEntry) langEntry.value = `${langEntry.value}, ${kw}`;
+      } else if (/\b(pytorch|tensorflow|keras|scikit|sklearn|xgboost|lightgbm|nlp|llm|deep learning|machine learning|computer vision|opencv|hugging face|langchain|transformers|spacy|nltk|generative ai|forecasting|clustering|classification|regression)\b/i.test(lowerKw)) {
+        const mlEntry = synced.skills.find(s => /ml|machine learning|deep learning|ai/i.test(s.label));
+        if (mlEntry) mlEntry.value = `${mlEntry.value}, ${kw}`;
+      } else if (/\b(aws|gcp|azure|cloud|snowflake|spark|pyspark|kafka|airflow|databricks|dbt|docker|kubernetes|k8s|terraform|ci\/cd|postgres|sql|bigquery|mysql|mongodb|redis|graphql|rest api|api|database|etl|pipeline|warehousing|data lake)\b/i.test(lowerKw)) {
+        const dataEntry = synced.skills.find(s => /data|cloud|infrastructure/i.test(s.label));
+        if (dataEntry) dataEntry.value = `${dataEntry.value}, ${kw}`;
+      } else if (/\b(tableau|power bi|looker|excel|git|github|gitlab|jira|confluence|linux|unix|jupyter|eda|statistical|statistics|a\/b test|analytics|visualization)\b/i.test(lowerKw)) {
+        const toolEntry = synced.skills.find(s => /analytics|tools/i.test(s.label));
+        if (toolEntry) toolEntry.value = `${toolEntry.value}, ${kw}`;
+      } else if (/\b(algorithm|structures|mathematics|statistics|probability|actuarial|database|operating system|networks)\b/i.test(lowerKw)) {
+        const courseEntry = synced.skills.find(s => /coursework/i.test(s.label));
+        if (courseEntry) courseEntry.value = `${courseEntry.value}, ${kw}`;
+      } else {
+        const target = synced.skills.find(s => /data|cloud|infrastructure/i.test(s.label)) ||
+                       synced.skills.find(s => /analytics|tools/i.test(s.label)) ||
+                       synced.skills[0];
+        if (target) target.value = `${target.value}, ${kw}`;
+      }
+    });
   }
 
   return synced;
@@ -1234,25 +1353,29 @@ function resetResumeToBase() {
   }
 }
 
-function updateUI() {
+function updateUI(skipSync = false) {
   const jdInput = document.getElementById("jd-input");
   const jdText = jdInput ? jdInput.value : "";
 
-  if (jdText && jdText.trim()) {
-    // 1-Click dynamic synchronization: tailors skills & reorders/rephrases projects to JD
-    activeResume = syncAndOptimizeResume([], jdText);
-  } else if (isCustomResume && customResumeData) {
-    activeResume = {
-      personal: { name: customResumeData.name, line1: "", line2: "" },
-      skills: JSON.parse(JSON.stringify(customResumeData.skills || [])),
-      education: EXACT_BASE_RESUME.education,
-      experience: EXACT_BASE_RESUME.experience,
-      research: EXACT_BASE_RESUME.research,
-      projects: EXACT_BASE_RESUME.projects,
-      rawText: customResumeData.rawText
-    };
-  } else {
-    activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
+  if (!skipSync) {
+    if (jdText && jdText.trim()) {
+      // 1. Preliminarily analyze the JD to detect missing keywords
+      const prelimAnalysis = analyzeJobDescription(jdText);
+      // 2. Synchronize activeResume: reorder categories, tailor projects, and append missing keywords
+      activeResume = syncAndOptimizeResume(prelimAnalysis ? prelimAnalysis.missing : [], jdText);
+    } else if (isCustomResume && customResumeData) {
+      activeResume = {
+        personal: { name: customResumeData.name, line1: "", line2: "" },
+        skills: JSON.parse(JSON.stringify(customResumeData.skills || [])),
+        education: EXACT_BASE_RESUME.education,
+        experience: EXACT_BASE_RESUME.experience,
+        research: EXACT_BASE_RESUME.research,
+        projects: EXACT_BASE_RESUME.projects,
+        rawText: customResumeData.rawText
+      };
+    } else {
+      activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
+    }
   }
 
   currentJDAnalysis = analyzeJobDescription(jdText);
@@ -1717,10 +1840,11 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
   const companyInput = document.getElementById("company-input");
   const companyName = (companyInput ? companyInput.value.trim() : "") || "General";
 
-  // 1. Sync skills if not already done
+  // 1. Sync skills and incorporate JD missing keywords
   if (!keepCurrentActiveResume) {
+    if (!currentJDAnalysis) currentJDAnalysis = analyzeJobDescription(jdText);
     activeResume = syncAndOptimizeResume(currentJDAnalysis ? currentJDAnalysis.missing : [], jdText);
-    updateUI();
+    updateUI(true); // Preserve activeResume
   }
 
   const fullLatex = generateLaTeX(activeResume);
@@ -1758,7 +1882,7 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
         method: "POST",
         headers: { "Content-Type": "text/plain", "X-Company-Name": companyName },
         body: fullLatex,
-        signal: AbortSignal.timeout(18000)
+        signal: AbortSignal.timeout(24000)
       });
       const data = await resp.json();
       if (data.success) {
@@ -1766,8 +1890,11 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
         const saved = data.downloaded ? `<br>📂 PDF saved to <code>Desktop/resumes/${companyName}/</code>` : "";
         showToastFeedback(
           `✓ <strong>Synced to Overleaf & Recompiled!</strong>${saved}<br>` +
-          `LaTeX also copied to clipboard.`, 6000
+          `LaTeX tailored with JD keywords & copied to clipboard.`, 6000
         );
+        if (!data.downloaded) {
+          downloadTexFile();
+        }
       }
     } catch (e) { console.warn("Bridge sync failed:", e); }
   }
@@ -1792,13 +1919,13 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
     if (extResult) { synced = true; method = "extension"; }
   }
 
-  // 6. TERTIARY: Open Overleaf + clipboard fallback (always open Overleaf so user can paste)
-  const targetOverleafUrl = getOverleafUrl();
-  window.open(targetOverleafUrl, "overleaf_sync_tab");
-
+  // 6. TERTIARY: Open Overleaf + clipboard fallback (only when bridge did not auto-inject)
   if (!synced) {
+    const targetOverleafUrl = getOverleafUrl();
+    window.open(targetOverleafUrl, "overleaf_sync_tab");
+    downloadTexFile();
     showToastFeedback(
-      `📋 <strong>LaTeX Copied to Clipboard!</strong><br>` +
+      `📋 <strong>LaTeX Copied & .tex Downloaded!</strong><br>` +
       `Overleaf tab opened — Press <strong>Cmd+A</strong> then <strong>Cmd+V</strong> to paste, then click <strong>Recompile</strong>.<br>` +
       `<em>Tip: Configure your project URL in Overleaf Settings.</em>`, 9000
     );
@@ -1825,7 +1952,6 @@ async function downloadResumePDF() {
     if (btnTop) btnTop.innerHTML = html;
   };
 
-
   const origMain = btnMain ? btnMain.innerHTML : "";
   const origTop = btnTop ? btnTop.innerHTML : "";
 
@@ -1833,6 +1959,14 @@ async function downloadResumePDF() {
 
   const companyInput = document.getElementById("company-input");
   const companyName = (companyInput ? companyInput.value.trim() : "") || "General";
+
+  const jdInput = document.getElementById("jd-input");
+  const jdText = jdInput ? jdInput.value : "";
+  if (jdText && jdText.trim()) {
+    if (!currentJDAnalysis) currentJDAnalysis = analyzeJobDescription(jdText);
+    activeResume = syncAndOptimizeResume(currentJDAnalysis ? currentJDAnalysis.missing : [], jdText);
+    updateUI(true);
+  }
 
   const fullLatex = generateLaTeX(activeResume);
   // Always copy to clipboard
@@ -1848,7 +1982,7 @@ async function downloadResumePDF() {
         method: "POST",
         headers: { "Content-Type": "text/plain", "X-Company-Name": companyName },
         body: fullLatex,
-        signal: AbortSignal.timeout(20000)
+        signal: AbortSignal.timeout(24000)
       });
       const data = await resp.json();
       if (data.success && data.downloaded) {
@@ -1859,14 +1993,13 @@ async function downloadResumePDF() {
         );
         setBtnText(`<span>✓</span><span>PDF Downloaded & Saved!</span>`);
       } else if (data.success) {
-        // Bridge worked but download timed out — open Overleaf for manual download
-        window.open(getOverleafUrl(), "overleaf_sync_tab");
+        downloaded = true;
         showToastFeedback(
           `✓ <strong>LaTeX Injected & Recompiled!</strong><br>` +
-          `Click the <strong>Download PDF</strong> button in Overleaf.`, 7000
+          `Opening print-to-PDF view...`, 5000
         );
-        setBtnText(`<span>✓</span><span>Injected — Click Download in Overleaf</span>`);
-        downloaded = true; // partial success
+        printResumePDF();
+        setBtnText(`<span>✓</span><span>Injected & PDF Opened</span>`);
       }
     } catch (e) { console.warn("Bridge download failed:", e); }
   }
@@ -1891,23 +2024,17 @@ async function downloadResumePDF() {
     }
   }
 
-  // FALLBACK: Download .tex file + instructions
+  // FALLBACK: Print PDF + Download .tex
   if (!downloaded) {
+    printResumePDF();
     downloadTexFile();
-    showToastFeedback(
-      `📄 <strong>Overleaf opened + .tex file downloaded!</strong><br>` +
-      `In Overleaf: Press <strong>Cmd+A → Cmd+V</strong>, click <strong>Recompile</strong>, then click <strong>Download PDF</strong>.<br>` +
-      `<em>Tip: Run the bridge server for full auto-download.</em>`, 9000
-    );
-    setBtnText(`<span>📥</span><span>Overleaf Opened + .tex Downloaded</span>`);
+    setBtnText(`<span>✓</span><span>PDF & .tex Ready</span>`);
   }
 
   setTimeout(() => {
     if (btnMain) btnMain.innerHTML = origMain;
     if (btnTop) btnTop.innerHTML = origTop;
-  }, 4500);
-
-  saveTargetCompany(companyName);
+  }, 5000);
 }
 
 
