@@ -105,8 +105,14 @@ const EXACT_BASE_RESUME = {
 // State
 let isAiTailored = false;
 let aiTailoredMeta = null;
+let isCustomResume = false;
+let customResumeData = null;
 let activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
 let currentJDAnalysis = null;
+
+function getOverleafUrl() {
+  return localStorage.getItem("resumesync_overleaf_url") || "https://www.overleaf.com/project/69787f4c07ea46326eb8587e";
+}
 
 // Keyword Dictionary
 const KEYWORD_DICTIONARY = [
@@ -260,13 +266,16 @@ function showToastFeedback(msg, duration = 4000) {
 }
 
 function getResumeSearchableText(res) {
+  if (isCustomResume && customResumeData && customResumeData.rawText) {
+    return (customResumeData.rawText + " " + (res.skills || []).map(s => s.value).join(" ")).toLowerCase();
+  }
   const parts = [
-    res.personal.name,
-    res.education.map(e => `${e.institution} ${e.degree} ${e.location}`).join(" "),
-    res.skills.map(s => `${s.label}: ${s.value}`).join(" "),
-    res.experience.map(e => `${e.role} ${e.company} ${e.bullets.join(" ")}`).join(" "),
-    res.research.map(r => `${r.title} ${r.subtitle} ${r.bullets.join(" ")}`).join(" "),
-    res.projects.map(p => `${p.title} ${p.bullets.join(" ")}`).join(" ")
+    res.personal ? res.personal.name : "",
+    (res.education || []).map(e => `${e.institution} ${e.degree} ${e.location}`).join(" "),
+    (res.skills || []).map(s => `${s.label}: ${s.value}`).join(" "),
+    (res.experience || []).map(e => `${e.role} ${e.company} ${(e.bullets || []).join(" ")}`).join(" "),
+    (res.research || []).map(r => `${r.title} ${r.subtitle} ${(r.bullets || []).join(" ")}`).join(" "),
+    (res.projects || []).map(p => `${p.title} ${(p.bullets || []).join(" ")}`).join(" ")
   ];
   return parts.join(" ").toLowerCase();
 }
@@ -486,6 +495,46 @@ function optimizeProjectsForJD(jdText) {
 // and tailors project bullet points to match the JD's industry and requirements.
 function syncAndOptimizeResume(missingKeywords, jdText) {
   const lowerJD = (jdText || "").toLowerCase();
+
+  // If user uploaded a custom LaTeX resume, tailor their custom categories
+  if (isCustomResume && customResumeData) {
+    const synced = {
+      personal: activeResume.personal || { name: customResumeData.name },
+      skills: JSON.parse(JSON.stringify(customResumeData.skills || [])),
+      rawText: customResumeData.rawText
+    };
+
+    synced.skills.forEach(cat => {
+      const items = (cat.value || "").split(",").map(s => s.trim()).filter(Boolean);
+      const prioritized = [];
+      const remaining = [];
+      for (const it of items) {
+        if (lowerJD.includes(it.toLowerCase()) || 
+            (it === "SQL" && /\bsql\b/i.test(lowerJD)) ||
+            (it === "Python" && lowerJD.includes("python")) ||
+            (it === "R" && /\b(r|r programming)\b/i.test(lowerJD))) {
+          prioritized.push(it);
+        } else {
+          remaining.push(it);
+        }
+      }
+      cat.value = [...prioritized, ...remaining].join(", ");
+    });
+
+    if (missingKeywords && missingKeywords.length > 0) {
+      const targetCat = synced.skills.find(s => /skill|tech|tool|lang/i.test(s.label)) || synced.skills[0];
+      if (targetCat) {
+        const currentVal = targetCat.value.toLowerCase();
+        const toAdd = missingKeywords.slice(0, 4).filter(k => !currentVal.includes(k.toLowerCase()));
+        if (toAdd.length > 0) {
+          targetCat.value = `${targetCat.value}, ${toAdd.join(", ")}`;
+        }
+      }
+    }
+
+    return synced;
+  }
+
   const synced = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
 
   // Dynamically tailor, rephrase, and reorder projects based on the JD
@@ -727,6 +776,27 @@ function escapeLatex(text) {
 
 // LaTeX Code Generator (Matching exact roy.tex + resume.cls in Overleaf, guaranteed 1 page)
 function generateLaTeX(res) {
+  // If custom resume is active, inject tailored skills into user's custom template!
+  if (isCustomResume && customResumeData && customResumeData.template) {
+    let skillsFormatted = "";
+    if (customResumeData.skillsStyle === "rSection") {
+      skillsFormatted = `%----------------------------------------------------------------------------------------\n` +
+        `% TECHNICAL SKILLS (Linear ATS-Proof Format)\n` +
+        `%----------------------------------------------------------------------------------------\n` +
+        `\\begin{rSection}{TECHNICAL SKILLS}\n\\footnotesize\n` +
+        (res.skills || []).map(s => `\\textbf{${escapeLatex(s.label)}:} ${escapeLatex(s.value)} \\\\`).join("\n") +
+        `\n\\normalsize\n\\end{rSection}`;
+    } else if (customResumeData.skillsStyle === "section_itemize") {
+      skillsFormatted = `\\section{Technical Skills}\n \\begin{itemize}[leftmargin=0.15in, label={}]\n    \\small{\\item{\n` +
+        (res.skills || []).map(s => `     \\textbf{${escapeLatex(s.label)}}{: ${escapeLatex(s.value)}} \\\\`).join("\n") +
+        `\n    }}\n \\end{itemize}`;
+    } else {
+      skillsFormatted = `\\section{Technical Skills}\n` +
+        (res.skills || []).map(s => `\\textbf{${escapeLatex(s.label)}:} ${escapeLatex(s.value)} \\\\`).join("\n");
+    }
+    return customResumeData.template.replace("__RESUMESYNC_SKILLS_SECTION__", skillsFormatted);
+  }
+
   const eduSection = `\\begin{rSection}{EDUCATION}
 {\\bf State University of New York at Buffalo} \\hfill \\textit{Buffalo, NY}\\\\
 Master of Science in Engineering Science (Data Science) \\hfill Aug 2026 -- Expected December 2027
@@ -863,11 +933,305 @@ ${res.skills.map(s => `\\textbf{${escapeLatex(s.label)}:} ${escapeLatex(s.value)
 \\end{rSection}`;
 }
 
+// Helper to escape HTML characters
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Universal LaTeX Resume Parser
+function parseCustomLatex(latexCode) {
+  if (!latexCode || !latexCode.trim()) return null;
+
+  const raw = latexCode;
+
+  // 1. Detect candidate name
+  let name = "Candidate";
+  const nameMatch = raw.match(/\\name\{([^}]+)\}/i) ||
+                    raw.match(/\\author\{([^}]+)\}/i) ||
+                    raw.match(/\\namesection\{([^}]+)\}\{([^}]+)\}/i) ||
+                    raw.match(/\\textbf\{\\Huge\s*([A-Za-z\s]+)\}/i) ||
+                    raw.match(/\\textbf\{\\LARGE\s*([A-Za-z\s]+)\}/i) ||
+                    raw.match(/\\Huge\s*\\scshape\s*([A-Za-z\s]+)/i);
+  if (nameMatch) {
+    if (nameMatch[2]) {
+      name = `${nameMatch[1].trim()} ${nameMatch[2].trim()}`;
+    } else {
+      name = nameMatch[1].trim();
+    }
+  }
+
+  name = name.replace(/\\[a-zA-Z]+/g, "").replace(/[{}\\]/g, "").trim() || "Candidate";
+
+  // 2. Detect template type
+  let templateType = "Custom LaTeX";
+  if (raw.includes("{resume}") || raw.includes("resume.cls")) {
+    templateType = "Overleaf resume.cls";
+  } else if (raw.includes("jake") || (raw.includes("article") && raw.includes("Technical Skills"))) {
+    templateType = "Jake's Resume / Article";
+  } else if (raw.includes("deedy")) {
+    templateType = "Deedy CV";
+  } else if (raw.includes("moderncv")) {
+    templateType = "ModernCV";
+  }
+
+  // 3. Detect Skills Section
+  let skills = [];
+  let skillsStyle = "rSection";
+  let templateWithPlaceholder = raw;
+
+  const rSectionMatch = raw.match(/(\\begin\{rSection\}\{(?:TECHNICAL\s+)?SKILLS[^\}]*\}[\s\S]*?\\end\{rSection\})/i);
+  const sectionItemizeMatch = raw.match(/(\\section\{(?:Technical\s+)?Skills[^\}]*\}[\s\S]*?\\end\{itemize\})/i);
+  const genericSectionMatch = raw.match(/(\\section\*?\{(?:Technical\s+)?Skills[^\}]*\}[\s\S]*?)(?=\\section\*?\{|\\end\{document\}|\\begin\{rSection\})/i);
+
+  let targetSkillsBlock = "";
+  if (rSectionMatch) {
+    targetSkillsBlock = rSectionMatch[1];
+    skillsStyle = "rSection";
+    templateWithPlaceholder = raw.replace(targetSkillsBlock, "__RESUMESYNC_SKILLS_SECTION__");
+  } else if (sectionItemizeMatch) {
+    targetSkillsBlock = sectionItemizeMatch[1];
+    skillsStyle = "section_itemize";
+    templateWithPlaceholder = raw.replace(targetSkillsBlock, "__RESUMESYNC_SKILLS_SECTION__");
+  } else if (genericSectionMatch) {
+    targetSkillsBlock = genericSectionMatch[1];
+    skillsStyle = "generic_section";
+    templateWithPlaceholder = raw.replace(targetSkillsBlock, "__RESUMESYNC_SKILLS_SECTION__");
+  }
+
+  // Parse categories from skills block
+  if (targetSkillsBlock) {
+    const lineRegex = /\\textbf\{([^}:]+)[:\}]?\s*(?:\{:?\})?\s*([^\n\\]+)/g;
+    let match;
+    while ((match = lineRegex.exec(targetSkillsBlock)) !== null) {
+      const label = match[1].replace(/[{}\\]/g, "").trim();
+      let value = match[2].replace(/[{}\\]/g, " ").replace(/\s+/g, " ").trim();
+      value = value.replace(/^[,\s:]+|[,\s:]+$/g, "");
+      if (label && value && label.length < 40) {
+        skills.push({ label, value });
+      }
+    }
+  }
+
+  // Fallback skills if none parsed: provide starter categories
+  if (skills.length === 0) {
+    skills = [
+      { label: "Languages", value: "Python, SQL, JavaScript, HTML/CSS" },
+      { label: "Technical Skills", value: "Data Analysis, Git, Problem Solving, APIs" },
+      { label: "Tools & Cloud", value: "Docker, Cloud Platforms, Excel, Linux" }
+    ];
+    if (!templateWithPlaceholder.includes("__RESUMESYNC_SKILLS_SECTION__")) {
+      const endDocIdx = templateWithPlaceholder.lastIndexOf("\\end{document}");
+      if (endDocIdx !== -1) {
+        templateWithPlaceholder = templateWithPlaceholder.slice(0, endDocIdx) +
+          "\n\n__RESUMESYNC_SKILLS_SECTION__\n\n" +
+          templateWithPlaceholder.slice(endDocIdx);
+      }
+    }
+  }
+
+  return {
+    name,
+    templateType,
+    skills,
+    skillsStyle,
+    template: templateWithPlaceholder,
+    rawText: raw.replace(/\\[a-zA-Z]+/g, " ").replace(/[{}\\]/g, " ")
+  };
+}
+
+function loadCustomLatex(latexCode, fileName = "custom_resume.tex") {
+  const parsed = parseCustomLatex(latexCode);
+  if (!parsed) {
+    alert("Could not parse the provided LaTeX file. Please ensure it contains valid LaTeX code.");
+    return;
+  }
+
+  isCustomResume = true;
+  customResumeData = parsed;
+  isAiTailored = false;
+  aiTailoredMeta = null;
+
+  activeResume = {
+    personal: { name: parsed.name, line1: "", line2: "" },
+    skills: parsed.skills,
+    education: EXACT_BASE_RESUME.education,
+    experience: EXACT_BASE_RESUME.experience,
+    research: EXACT_BASE_RESUME.research,
+    projects: EXACT_BASE_RESUME.projects,
+    rawText: parsed.rawText
+  };
+
+  const profileNameEl = document.getElementById("active-profile-name");
+  const templateBadgeEl = document.getElementById("resume-template-badge");
+  const navProfileEl = document.getElementById("nav-company-name");
+
+  if (profileNameEl) profileNameEl.textContent = `${parsed.name} (${fileName})`;
+  if (templateBadgeEl) templateBadgeEl.textContent = parsed.templateType;
+
+  updateUI();
+  showToastFeedback(`✓ Loaded <strong>${parsed.name}</strong>'s resume (${parsed.templateType})!`);
+}
+
+function loadDemoProfile() {
+  isCustomResume = false;
+  customResumeData = null;
+  isAiTailored = false;
+  aiTailoredMeta = null;
+  activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
+
+  const profileNameEl = document.getElementById("active-profile-name");
+  const templateBadgeEl = document.getElementById("resume-template-badge");
+
+  if (profileNameEl) profileNameEl.textContent = "Shivamshu Roy (Demo Profile)";
+  if (templateBadgeEl) templateBadgeEl.textContent = "Overleaf resume.cls";
+
+  updateUI();
+  showToastFeedback(`🌟 Loaded Shivamshu Roy's Data Science demo profile!`);
+}
+
+function printResumePDF() {
+  const res = activeResume;
+  const companyInput = document.getElementById("company-input");
+  const companyName = (companyInput ? companyInput.value.trim() : "") || "Target Role";
+  const name = res.personal?.name || customResumeData?.name || "Candidate";
+
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    alert("Popup blocker prevented opening the print window. Please allow popups for this site.");
+    return;
+  }
+
+  const skillsHtml = (res.skills || []).map(s => `
+    <div style="margin-bottom: 5px;">
+      <strong style="color: #111827;">${escapeHtml(s.label)}:</strong> 
+      <span style="color: #374151;">${escapeHtml(s.value)}</span>
+    </div>
+  `).join("");
+
+  const expHtml = (res.experience || []).map(e => `
+    <div style="margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13.5px; color: #111827;">
+        <span>${escapeHtml(e.role)}</span>
+        <span>${escapeHtml(e.dates)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-style: italic; font-size: 12.5px; color: #4b5563; margin-bottom: 4px;">
+        <span>${escapeHtml(e.company)}</span>
+        <span>${escapeHtml(e.location)}</span>
+      </div>
+      <ul style="margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.45; color: #374151;">
+        ${(e.bullets || []).map(b => `<li>${escapeHtml(b)}</li>`).join("")}
+      </ul>
+    </div>
+  `).join("");
+
+  const projHtml = (res.projects || []).map(p => `
+    <div style="margin-bottom: 10px;">
+      <div style="font-weight: 700; font-size: 13px; color: #111827;">
+        ${escapeHtml(p.title || p.cleanTitle)}
+      </div>
+      <ul style="margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.45; color: #374151;">
+        ${(p.bullets || []).map(b => `<li>${escapeHtml(b)}</li>`).join("")}
+      </ul>
+    </div>
+  `).join("");
+
+  const eduHtml = (res.education || []).map(ed => `
+    <div style="display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px;">
+      <div>
+        <strong style="color: #111827;">${escapeHtml(ed.institution)}</strong> — ${escapeHtml(ed.degree)}
+      </div>
+      <div style="color: #6b7280; font-size: 12px;">${escapeHtml(ed.dates)}</div>
+    </div>
+  `).join("");
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${name} — Resume (${companyName})</title>
+      <meta charset="utf-8">
+      <style>
+        @page { size: letter; margin: 0.4in; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          color: #111827;
+          background: #fff;
+          margin: 0 auto;
+          max-width: 800px;
+          line-height: 1.4;
+          font-size: 12px;
+          padding: 20px;
+        }
+        h1 {
+          font-size: 22px;
+          text-align: center;
+          margin: 0 0 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .header-contact {
+          text-align: center;
+          font-size: 11px;
+          color: #4b5563;
+          margin-bottom: 14px;
+        }
+        .section-heading {
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+          border-bottom: 1px solid #111827;
+          padding-bottom: 2px;
+          margin: 12px 0 6px;
+          letter-spacing: 0.5px;
+          color: #111827;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>${name}</h1>
+      <div class="header-contact">
+        ${res.personal?.line1 ? `<div>${res.personal.line1.replace(/<[^>]+>/g, '')}</div>` : ''}
+        ${res.personal?.line2 ? `<div>${res.personal.line2.replace(/<[^>]+>/g, '')}</div>` : ''}
+      </div>
+
+      ${eduHtml ? `<div class="section-heading">Education</div>${eduHtml}` : ''}
+      
+      <div class="section-heading">Technical Skills</div>
+      ${skillsHtml}
+
+      ${expHtml ? `<div class="section-heading">Experience</div>${expHtml}` : ''}
+      ${projHtml ? `<div class="section-heading">Projects</div>${projHtml}` : ''}
+
+      <script>
+        window.onload = function() {
+          setTimeout(function() {
+            window.print();
+          }, 300);
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
 // Reset Resume to Master Baseline
 function resetResumeToBase() {
-  activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
-  updateUI();
-  showToastFeedback("🔄 Restored Shivamshu's original baseline resume!");
+  if (isCustomResume && customResumeData) {
+    activeResume.skills = JSON.parse(JSON.stringify(customResumeData.skills));
+    updateUI();
+    showToastFeedback(`🔄 Restored ${customResumeData.name}'s original skills!`);
+  } else {
+    activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
+    updateUI();
+    showToastFeedback("🔄 Restored Shivamshu's original baseline resume!");
+  }
 }
 
 function updateUI() {
@@ -1419,13 +1783,14 @@ async function pushToOverleaf(keepCurrentActiveResume = false) {
   }
 
   // 6. TERTIARY: Open Overleaf + clipboard fallback (always open Overleaf so user can paste)
-  window.open("https://www.overleaf.com/project/69787f4c07ea46326eb8587e", "overleaf_sync_tab");
+  const targetOverleafUrl = getOverleafUrl();
+  window.open(targetOverleafUrl, "overleaf_sync_tab");
 
   if (!synced) {
     showToastFeedback(
       `📋 <strong>LaTeX Copied to Clipboard!</strong><br>` +
       `Overleaf tab opened — Press <strong>Cmd+A</strong> then <strong>Cmd+V</strong> to paste, then click <strong>Recompile</strong>.<br>` +
-      `<em>Tip: Keep the bridge running for auto-sync.</em>`, 9000
+      `<em>Tip: Configure your project URL in Overleaf Settings.</em>`, 9000
     );
     method = "clipboard";
   } else if (method === "extension") {
@@ -1485,7 +1850,7 @@ async function downloadResumePDF() {
         setBtnText(`<span>✓</span><span>PDF Downloaded & Saved!</span>`);
       } else if (data.success) {
         // Bridge worked but download timed out — open Overleaf for manual download
-        window.open("https://www.overleaf.com/project/69787f4c07ea46326eb8587e", "overleaf_sync_tab");
+        window.open(getOverleafUrl(), "overleaf_sync_tab");
         showToastFeedback(
           `✓ <strong>LaTeX Injected & Recompiled!</strong><br>` +
           `Click the <strong>Download PDF</strong> button in Overleaf.`, 7000
@@ -1498,7 +1863,7 @@ async function downloadResumePDF() {
 
   // SECONDARY: Extension PDF download
   if (!downloaded) {
-    window.open("https://www.overleaf.com/project/69787f4c07ea46326eb8587e", "overleaf_sync_tab");
+    window.open(getOverleafUrl(), "overleaf_sync_tab");
     const extHandled = await new Promise((resolve) => {
       const h = (e) => {
         if (e.data && e.data.type === "RESUMESYNC_DOWNLOAD_RESULT") {
@@ -1541,12 +1906,13 @@ async function downloadResumePDF() {
 function downloadTexFile() {
   const companyInput = document.getElementById("company-input");
   const companyName = (companyInput ? companyInput.value.trim() : "") || "General";
+  const nameClean = (activeResume.personal?.name || customResumeData?.name || "Candidate").replace(/[^a-zA-Z0-9_-]/g, "_");
   const code = generateLaTeX(activeResume);
   const blob = new Blob([code], { type: "text/x-tex;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `Shivamshu_Roy_Resume_${companyName}.tex`;
+  a.download = `${nameClean}_Resume_${companyName}.tex`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -1566,9 +1932,120 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnDownloadMain = document.getElementById("btn-download-resume-main");
   const btnDownloadTop = document.getElementById("btn-download-resume-top");
   const btnDownloadTex = document.getElementById("btn-download-tex");
+  const btnPrintPdf = document.getElementById("btn-print-pdf");
   const btnCopyLatex = document.getElementById("btn-copy-latex");
   const btnCopySkills = document.getElementById("btn-copy-skills");
   const btnReset = document.getElementById("btn-reset-resume");
+
+  // Universal Profile & Ingestion Elements
+  const btnLoadDemoProfile = document.getElementById("btn-load-demo-profile");
+  const texFileInput = document.getElementById("tex-file-input");
+  const btnPasteLatexOpen = document.getElementById("btn-paste-latex-open");
+  const modalPasteLatex = document.getElementById("modal-paste-latex");
+  const btnClosePasteModal = document.getElementById("btn-close-paste-modal");
+  const btnCancelPasteModal = document.getElementById("btn-cancel-paste-modal");
+  const btnApplyPastedLatex = document.getElementById("btn-apply-pasted-latex");
+  const pasteLatexTextarea = document.getElementById("paste-latex-textarea");
+
+  // Overleaf Settings Modal Elements
+  const btnOverleafSettingsOpen = document.getElementById("btn-overleaf-settings-open");
+  const btnNavOverleafConfig = document.getElementById("btn-nav-overleaf-config");
+  const modalOverleafSettings = document.getElementById("modal-overleaf-settings");
+  const btnCloseOverleafModal = document.getElementById("btn-close-overleaf-modal");
+  const btnSaveOverleafUrl = document.getElementById("btn-save-overleaf-url");
+  const btnCreateOverleafProject = document.getElementById("btn-create-overleaf-project");
+  const overleafUrlInput = document.getElementById("overleaf-url-input");
+
+  // Wire up Demo Profile load button
+  if (btnLoadDemoProfile) {
+    btnLoadDemoProfile.addEventListener("click", () => {
+      loadDemoProfile();
+    });
+  }
+
+  // Wire up .tex file upload
+  if (texFileInput) {
+    texFileInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const content = event.target.result;
+          loadCustomLatex(content, file.name);
+          texFileInput.value = "";
+        };
+        reader.readAsText(file);
+      }
+    });
+  }
+
+  // Wire up Paste LaTeX Modal
+  if (btnPasteLatexOpen && modalPasteLatex) {
+    btnPasteLatexOpen.addEventListener("click", () => {
+      if (pasteLatexTextarea) {
+        pasteLatexTextarea.value = isCustomResume && customResumeData ? customResumeData.template : generateLaTeX(activeResume);
+      }
+      modalPasteLatex.style.display = "flex";
+    });
+  }
+  if (btnClosePasteModal && modalPasteLatex) {
+    btnClosePasteModal.addEventListener("click", () => {
+      modalPasteLatex.style.display = "none";
+    });
+  }
+  if (btnCancelPasteModal && modalPasteLatex) {
+    btnCancelPasteModal.addEventListener("click", () => {
+      modalPasteLatex.style.display = "none";
+    });
+  }
+  if (btnApplyPastedLatex && modalPasteLatex) {
+    btnApplyPastedLatex.addEventListener("click", () => {
+      const code = pasteLatexTextarea ? pasteLatexTextarea.value : "";
+      if (!code.trim()) {
+        alert("Please paste some LaTeX code first.");
+        return;
+      }
+      loadCustomLatex(code, "pasted_resume.tex");
+      modalPasteLatex.style.display = "none";
+    });
+  }
+
+  // Wire up Overleaf Settings Modal
+  const openOverleafModal = () => {
+    if (modalOverleafSettings && overleafUrlInput) {
+      overleafUrlInput.value = getOverleafUrl();
+      modalOverleafSettings.style.display = "flex";
+    }
+  };
+
+  if (btnOverleafSettingsOpen) btnOverleafSettingsOpen.addEventListener("click", openOverleafModal);
+  if (btnNavOverleafConfig) btnNavOverleafConfig.addEventListener("click", openOverleafModal);
+
+  if (btnCloseOverleafModal && modalOverleafSettings) {
+    btnCloseOverleafModal.addEventListener("click", () => {
+      modalOverleafSettings.style.display = "none";
+    });
+  }
+  if (btnSaveOverleafUrl && modalOverleafSettings && overleafUrlInput) {
+    btnSaveOverleafUrl.addEventListener("click", () => {
+      const val = overleafUrlInput.value.trim();
+      if (val) {
+        localStorage.setItem("resumesync_overleaf_url", val);
+        showToastFeedback(`✓ Saved personal Overleaf project URL!`);
+      }
+      modalOverleafSettings.style.display = "none";
+    });
+  }
+  if (btnCreateOverleafProject) {
+    btnCreateOverleafProject.addEventListener("click", () => {
+      window.open("https://www.overleaf.com/project", "_blank");
+    });
+  }
+
+  // Print / Direct PDF Generation
+  if (btnPrintPdf) {
+    btnPrintPdf.addEventListener("click", printResumePDF);
+  }
 
   // Company input manual change
   if (companyInput) {
@@ -1608,7 +2085,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   jdInput.addEventListener("input", () => {
     if (isAiTailored) {
-      activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
+      activeResume = isCustomResume && customResumeData ?
+        { ...activeResume, skills: JSON.parse(JSON.stringify(customResumeData.skills)) } :
+        JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
     }
     isAiTailored = false;
     aiTailoredMeta = null;
@@ -1616,7 +2095,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   jdInput.addEventListener("paste", () => {
     if (isAiTailored) {
-      activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
+      activeResume = isCustomResume && customResumeData ?
+        { ...activeResume, skills: JSON.parse(JSON.stringify(customResumeData.skills)) } :
+        JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
     }
     isAiTailored = false;
     aiTailoredMeta = null;
@@ -1630,7 +2111,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (companyInput) {
       delete companyInput.dataset.userEdited;
     }
-    activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
+    activeResume = isCustomResume && customResumeData ?
+      { ...activeResume, skills: JSON.parse(JSON.stringify(customResumeData.skills)) } :
+      JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
     isAiTailored = false;
     aiTailoredMeta = null;
     updateUI();
@@ -1668,7 +2151,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const result = await mammoth.extractRawText({ arrayBuffer });
         extractedText = result.value;
       } else {
-        // Plain text, markdown, etc.
         extractedText = await file.text();
       }
 
@@ -1678,7 +2160,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       jdInput.value = extractedText.trim();
       if (companyInput) delete companyInput.dataset.userEdited;
-      activeResume = JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
+      activeResume = isCustomResume && customResumeData ?
+        { ...activeResume, skills: JSON.parse(JSON.stringify(customResumeData.skills)) } :
+        JSON.parse(JSON.stringify(EXACT_BASE_RESUME));
       isAiTailored = false;
       aiTailoredMeta = null;
       updateUI();

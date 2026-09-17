@@ -25,10 +25,13 @@
         <div class="brand-icon">⚡</div>
         <div>
           <h1 class="brand-title">ResumeSync AI</h1>
-          <p class="brand-sub">Instant ATS Keyword Matcher &amp; Real-Time Overleaf Sync</p>
+          <p class="brand-sub">Universal ATS Resume Optimizer &amp; Overleaf Sync</p>
         </div>
       </div>
       <div class="nav-actions">
+        <button type="button" id="btn-nav-overleaf-config" class="btn-nav-pill" title="Configure your personal Overleaf project URL">
+          <span>🔗 Overleaf Project</span>
+        </button>
         <div id="nav-company-pill" class="nav-company-pill" title="Target employer folder">
           <span class="nav-pill-icon">🏢</span>
           <span class="nav-pill-label">Company:</span>
@@ -36,6 +39,30 @@
         </div>
       </div>
     </header>
+
+    <!-- Universal Resume Source Bar -->
+    <div class="resume-source-bar">
+      <div class="source-bar-left">
+        <span class="source-tag">ACTIVE RESUME:</span>
+        <span id="active-profile-name" class="active-profile-name">Shivamshu Roy (Demo Profile)</span>
+        <span id="resume-template-badge" class="resume-template-badge">Overleaf resume.cls</span>
+      </div>
+      <div class="source-bar-right">
+        <button type="button" id="btn-load-demo-profile" class="btn btn-tiny btn-secondary" title="Load Shivamshu's Data Science & ML demo resume">
+          🌟 Load Demo Profile
+        </button>
+        <label for="tex-file-input" class="btn btn-tiny btn-upload-label" title="Upload your own .tex resume file">
+          <span>📤 Upload .tex File</span>
+          <input type="file" id="tex-file-input" accept=".tex,.txt" style="display: none;">
+        </label>
+        <button type="button" id="btn-paste-latex-open" class="btn btn-tiny btn-secondary" title="Paste raw LaTeX code directly">
+          📋 Paste LaTeX
+        </button>
+        <button type="button" id="btn-overleaf-settings-open" class="btn btn-tiny btn-secondary" title="Set your personal Overleaf project URL">
+          ⚙️ Overleaf Settings
+        </button>
+      </div>
+    </div>
 
     <!-- Main Workspace -->
     <main class="workspace">
@@ -189,6 +216,7 @@
           </div>
           <div class="toolbar-actions">
             <button id="btn-download-tex" class="btn btn-small btn-secondary">💾 Save .tex</button>
+            <button id="btn-print-pdf" class="btn btn-small btn-secondary" title="Instant high-quality ATS-proof PDF in your browser">🖨️ Print / Save PDF</button>
             <button id="btn-copy-latex" class="btn btn-small btn-primary">📋 Copy All LaTeX</button>
             <button id="btn-copy-skills" class="btn btn-small btn-secondary">📋 Copy Skills Block</button>
             <button id="btn-reset-resume" class="btn btn-small btn-secondary">🔄 Reset Original</button>
@@ -217,6 +245,62 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- Modal: Overleaf Project URL Settings -->
+  <div id="modal-overleaf-settings" class="modal-backdrop" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ Overleaf Project Settings</div>
+        <button type="button" id="btn-close-overleaf-modal" class="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-sub">Configure your personal Overleaf project link so ResumeSync AI can 1-click sync your tailored LaTeX directly to your editor.</p>
+        <div class="form-group">
+          <label class="form-label" for="overleaf-url-input">Your Overleaf Project URL</label>
+          <input type="url" id="overleaf-url-input" class="form-input" placeholder="https://www.overleaf.com/project/69787f4c07ea46326eb8587e">
+          <span class="link-hint">Format: https://www.overleaf.com/project/&lt;your-project-id&gt;</span>
+        </div>
+        <div class="guardrails-notice">
+          <strong>⚡ 1-Click Sync Automation:</strong>
+          <ul>
+            <li>Clicking <strong>"1-Click Sync"</strong> puts your tailored LaTeX on your clipboard and opens this project in a new tab.</li>
+            <li>Press <strong>Cmd+V</strong> (or Ctrl+V) and click <strong>Recompile</strong> in Overleaf.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-create-overleaf-project" class="btn btn-secondary">
+          + Open Overleaf
+        </button>
+        <button type="button" id="btn-save-overleaf-url" class="btn btn-primary">
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Paste Custom LaTeX Resume -->
+  <div id="modal-paste-latex" class="modal-backdrop" style="display: none;">
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="modal-header">
+        <div class="modal-title">📋 Paste Your LaTeX Resume Code</div>
+        <button type="button" id="btn-close-paste-modal" class="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-sub">Paste your entire LaTeX resume document below. ResumeSync AI will detect your name, existing skills, and template structure.</p>
+        <div class="form-group">
+          <textarea id="paste-latex-textarea" class="code-editor" style="height: 320px;" placeholder="\documentclass{...}
+\begin{document}
+...
+\end{document}"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-cancel-paste-modal" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="btn-apply-pasted-latex" class="btn btn-primary">Load &amp; Optimize Resume</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
