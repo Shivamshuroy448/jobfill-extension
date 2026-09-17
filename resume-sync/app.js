@@ -1830,6 +1830,10 @@ async function isBridgeRunning() {
 
 // Function to trigger 1-click sync to Overleaf
 async function pushToOverleaf(keepCurrentActiveResume = false) {
+  if (typeof keepCurrentActiveResume !== "boolean") {
+    keepCurrentActiveResume = false;
+  }
+
   const jdInput = document.getElementById("jd-input");
   const jdText = jdInput.value;
   if (!jdText.trim()) {
@@ -2347,8 +2351,8 @@ document.addEventListener("DOMContentLoaded", () => {
     showToastFeedback(`🗑 Cleared Job Description`);
   });
 
-  if (btnSyncMain) btnSyncMain.addEventListener("click", pushToOverleaf);
-  if (btnSyncTop) btnSyncTop.addEventListener("click", pushToOverleaf);
+  if (btnSyncMain) btnSyncMain.addEventListener("click", () => pushToOverleaf(false));
+  if (btnSyncTop) btnSyncTop.addEventListener("click", () => pushToOverleaf(false));
   if (btnDownloadMain) btnDownloadMain.addEventListener("click", async () => {
     await downloadResumePDF();
     fetchExistingFolders();
