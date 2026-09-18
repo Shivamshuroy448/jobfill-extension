@@ -86,6 +86,7 @@ def trigger_overleaf_download():
 
   var dl = document.querySelector("a[aria-label*=Download], a.pdf-toolbar-btn, a[href*=output]");
   if (dl && dl.href) {
+    try { dl.click(); } catch(e) {}
     window.location.href = dl.href;
     return "DOWNLOAD_TRIGGERED";
   }
@@ -127,10 +128,14 @@ def notify_macos(title, message):
 def get_downloads_pdf_set():
     if not os.path.exists(DOWNLOADS_DIR):
         return set()
-    return {
-        f for f in os.listdir(DOWNLOADS_DIR)
-        if f.lower().endswith(".pdf")
-    }
+    try:
+        return {
+            f for f in os.listdir(DOWNLOADS_DIR)
+            if f.lower().endswith(".pdf")
+        }
+    except Exception as e:
+        print(f"Notice reading downloads: {e}", flush=True)
+        return set()
 
 import re
 
@@ -150,13 +155,16 @@ def sanitize_candidate_name(name):
     cleaned = cleaned.replace(' ', '_')
     return cleaned if cleaned else "Shivamshu_Roy"
 
-def wait_for_downloaded_pdf(initial_set, timeout_sec=14):
+def wait_for_downloaded_pdf(initial_set, timeout_sec=20):
     start_time = time.time()
     while time.time() - start_time < timeout_sec:
         time.sleep(0.5)
         if not os.path.exists(DOWNLOADS_DIR):
             continue
-        current_files = os.listdir(DOWNLOADS_DIR)
+        try:
+            current_files = os.listdir(DOWNLOADS_DIR)
+        except Exception:
+            continue
         
         # Check if Chrome is actively downloading (.crdownload or temporary file)
         has_crdownload = any(f.endswith(".crdownload") or f.startswith(".com.google.Chrome") for f in current_files)
@@ -168,10 +176,13 @@ def wait_for_downloaded_pdf(initial_set, timeout_sec=14):
             if not f.lower().endswith(".pdf"):
                 continue
             path = os.path.join(DOWNLOADS_DIR, f)
-            mtime = os.path.getmtime(path)
-            if f not in initial_set or (mtime >= start_time - 1.0):
-                if os.path.getsize(path) > 1000:
-                    return path
+            try:
+                mtime = os.path.getmtime(path)
+                if f not in initial_set or (mtime >= start_time - 1.0):
+                    if os.path.getsize(path) > 1000:
+                        return path
+            except Exception:
+                continue
     return None
 
 def process_downloaded_pdf(src_path, target_company=None, candidate_name=None):
@@ -383,7 +394,7 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
                 trigger_overleaf_download()
 
                 # 3. Wait for downloaded PDF and move to company folder
-                downloaded_file = wait_for_downloaded_pdf(initial_pdfs, timeout_sec=14)
+                downloaded_file = wait_for_downloaded_pdf(initial_pdfs, timeout_sec=20)
                 dest_path = None
                 if downloaded_file:
                     dest_path = process_downloaded_pdf(downloaded_file, target_company=target_company, candidate_name=target_candidate)
