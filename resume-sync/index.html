@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ResumeSync AI — Finance & Tech ATS Resume Optimizer & Overleaf Sync</title>
+  <title>ResumeSync AI — Instant ATS Keyword Matcher & Overleaf Sync</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Client-side PDF and DOCX parsers for instant JD file upload -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -25,54 +25,17 @@
         <div class="brand-icon">⚡</div>
         <div>
           <h1 class="brand-title">ResumeSync AI</h1>
-          <p class="brand-sub">100% ATS Keyword Matcher &amp; 0% AI Application Suite</p>
+          <p class="brand-sub">Instant ATS Keyword Matcher &amp; Real-Time Overleaf Sync</p>
         </div>
       </div>
       <div class="nav-actions">
-        <button type="button" id="btn-nav-overleaf-config" class="btn-nav-pill" title="Configure your personal Overleaf project URL">
-          <span>🔗 Overleaf Project</span>
-        </button>
         <div id="nav-company-pill" class="nav-company-pill" title="Target employer folder">
           <span class="nav-pill-icon">🏢</span>
           <span class="nav-pill-label">Company:</span>
-          <strong id="nav-company-name">Goldman Sachs</strong>
+          <strong id="nav-company-name">General</strong>
         </div>
       </div>
     </header>
-
-    <!-- Career Track Switcher & Universal Profile Bar -->
-    <div class="resume-source-bar">
-      <div class="source-bar-left">
-        <div class="track-switcher">
-          <button type="button" id="btn-track-finance" class="btn-track active" title="Entry-Level Finance, Investment Banking, FP&A, Asset Management, Valuation">
-            💼 Finance Track
-          </button>
-          <button type="button" id="btn-track-tech" class="btn-track" title="Software Engineering, Data Science & Machine Learning">
-            💻 Tech Track
-          </button>
-        </div>
-        <div class="profile-info-wrap">
-          <span class="source-tag">CANDIDATE:</span>
-          <span id="active-profile-name" class="active-profile-name">Sanskriti Roy (NYU Stern — Finance Entry-Level)</span>
-          <span id="resume-template-badge" class="resume-template-badge">Wall Street Oasis / WSO Format</span>
-        </div>
-      </div>
-      <div class="source-bar-right">
-        <button type="button" id="btn-load-demo-profile" class="btn btn-tiny btn-secondary" title="Reset to base candidate resume">
-          🌟 Reset Profile
-        </button>
-        <label for="tex-file-input" class="btn btn-tiny btn-upload-label" title="Upload your own .tex resume file">
-          <span>📤 Upload .tex</span>
-          <input type="file" id="tex-file-input" accept=".tex,.txt" style="display: none;">
-        </label>
-        <button type="button" id="btn-paste-latex-open" class="btn btn-tiny btn-secondary" title="Paste raw LaTeX code directly">
-          📋 Paste LaTeX
-        </button>
-        <button type="button" id="btn-overleaf-settings-open" class="btn btn-tiny btn-secondary" title="Set your personal Overleaf project URL">
-          ⚙️ Overleaf Settings
-        </button>
-      </div>
-    </div>
 
     <!-- Main Workspace -->
     <main class="workspace">
@@ -92,7 +55,7 @@
           <div class="company-field-container">
             <div class="company-field-row">
               <span class="company-field-icon">🏢</span>
-              <input type="text" id="company-input" class="company-field-input" placeholder="e.g. Goldman Sachs, J.P. Morgan, Morgan Stanley..." autocomplete="off">
+              <input type="text" id="company-input" class="company-field-input" placeholder="e.g. Amazon, Google, Meta, Bloomberg..." autocomplete="off">
               <button id="btn-clear-company" class="btn-clear-company" title="Clear company" style="display: none;">✕</button>
               <span id="company-detect-badge" class="company-detect-badge">Auto-detected</span>
             </div>
@@ -101,7 +64,7 @@
               <div class="folder-dest-info">
                 <span class="dest-icon">📁</span>
                 <span class="dest-label">Folder:</span>
-                <span id="dest-folder-display" class="dest-path">Desktop/resumes/<strong id="dest-company-name">Goldman Sachs</strong>/</span>
+                <span id="dest-folder-display" class="dest-path">Desktop/resumes/<strong id="dest-company-name">General</strong>/</span>
               </div>
               <button id="btn-open-folder" class="btn-open-folder" title="Open folder in macOS Finder">
                 <span>📂 Open in Finder</span>
@@ -111,9 +74,18 @@
 
           <!-- Quick Select Company Chips -->
           <div class="quick-companies">
-            <span id="quick-companies-label" class="quick-label">Top finance employers:</span>
-            <div id="company-chips-row" class="company-chips-row">
-              <!-- Dynamically populated based on active track -->
+            <span class="quick-label">Popular companies:</span>
+            <div class="company-chips-row">
+              <button type="button" class="company-chip" data-company="Amazon">Amazon</button>
+              <button type="button" class="company-chip" data-company="Google">Google</button>
+              <button type="button" class="company-chip" data-company="Meta">Meta</button>
+              <button type="button" class="company-chip" data-company="Microsoft">Microsoft</button>
+              <button type="button" class="company-chip" data-company="Cardinal Health">Cardinal Health</button>
+              <button type="button" class="company-chip" data-company="CVS Health">CVS Health</button>
+              <button type="button" class="company-chip" data-company="Bloomberg">Bloomberg</button>
+              <button type="button" class="company-chip" data-company="Capital One">Capital One</button>
+              <button type="button" class="company-chip" data-company="Apple">Apple</button>
+              <button type="button" class="company-chip" data-company="Stripe">Stripe</button>
             </div>
           </div>
 
@@ -136,7 +108,7 @@
               </span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <button id="btn-load-example" class="btn-text" title="Cycle through target job descriptions">📋 Sample JD</button>
+              <button id="btn-load-example" class="btn-text" title="Cycle through sample job descriptions">📋 Sample JD</button>
               <label for="jd-file-input" class="btn-upload-label" title="Upload PDF, Word (DOCX), or Text file">
                 <span>📁 Upload JD</span>
                 <input type="file" id="jd-file-input" accept=".pdf,.docx,.doc,.txt,.md" style="display: none;">
@@ -144,24 +116,18 @@
               <button id="btn-clear-jd" class="btn-text">Clear</button>
             </div>
           </div>
-          <p class="card-instruction">Paste or drop a job description (.pdf, .docx, .txt) below. 100% ATS matching is instantaneous.</p>
+          <p class="card-instruction">Paste or drop a job description (.pdf, .docx, .txt) below. Analysis updates instantly.</p>
 
           <textarea id="jd-input" placeholder="Paste or drag-and-drop a job description (.pdf, .docx, .txt) here..."></textarea>
           
           <div class="sync-banner">
-            <button id="btn-auto-align-100" class="btn btn-auto-align-100" title="Automatically align all keywords, projects, and skills to achieve 100% ATS match with 0% AI phrasing">
-              <span class="bolt-icon">⚡</span>
-              <span>1-Click 100% ATS Auto-Align (0% AI)</span>
+            <button id="btn-sync-overleaf-main" class="btn btn-sync" title="1-Click sync tailored skills & projects and recompile in Overleaf">
+              <span class="sync-icon">⚡</span>
+              <span>1-Click Sync &amp; Recompile to Overleaf</span>
             </button>
-            <div class="sync-sub-actions">
-              <button id="btn-sync-overleaf-main" class="btn btn-sync" title="1-Click sync tailored skills & projects and recompile in Overleaf">
-                <span class="sync-icon">⚡</span>
-                <span>Overleaf Sync</span>
-              </button>
-              <button id="btn-download-resume-main" class="btn btn-download" title="Download tailored PDF">
-                <span>📥 Resume PDF</span>
-              </button>
-            </div>
+            <button id="btn-download-resume-main" class="btn btn-download" title="Download tailored PDF">
+              <span>📥 Download PDF</span>
+            </button>
           </div>
         </div>
 
@@ -172,10 +138,7 @@
               <span class="card-icon">📊</span>
               <h2 class="card-title">ATS Keyword Match Analysis</h2>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <button id="btn-quick-100-match" class="btn-quick-100" title="Auto-integrate missing keywords to 100% ATS match">🚀 Auto 100% Match</button>
-              <span id="match-score-badge" class="score-badge">0% Match</span>
-            </div>
+            <span id="match-score-badge" class="score-badge">0% Match</span>
           </div>
 
           <div class="score-container">
@@ -205,53 +168,34 @@
         </div>
       </section>
 
-      <!-- Right Panel: Multi-View Suite -->
+      <!-- Right Panel: Tailored Skills & Direct LaTeX Code View -->
       <section class="panel panel-right">
         <!-- View Toggle Tabs -->
         <div class="right-panel-tabs">
           <button type="button" id="tab-btn-skills" class="view-tab-btn active">
-            <span>🎯 Tailored Skills</span>
-          </button>
-          <button type="button" id="tab-btn-diff" class="view-tab-btn">
-            <span>⚖️ Track Changes Diff</span>
-            <span class="view-tab-badge diff-badge">Audit</span>
-          </button>
-          <button type="button" id="tab-btn-recruiter" class="view-tab-btn">
-            <span>💼 Recruiter Audit</span>
-            <span id="tab-recruiter-score" class="view-tab-badge score-badge-mini">100 ATS</span>
-          </button>
-          <button type="button" id="tab-btn-interview" class="view-tab-btn">
-            <span>🎤 Interview Prep</span>
-            <span class="view-tab-badge">Q&amp;A</span>
-          </button>
-          <button type="button" id="tab-btn-cover" class="view-tab-btn">
-            <span>📝 Cover Letter</span>
-          </button>
-          <button type="button" id="tab-btn-outreach" class="view-tab-btn">
-            <span>✉️ Outreach Suite</span>
-            <span class="view-tab-badge">6 Types</span>
+            <span>🎯 Tailored Technical Skills</span>
+            <span id="tab-skills-count" class="view-tab-badge">6 Categories</span>
           </button>
           <button type="button" id="tab-btn-latex" class="view-tab-btn">
-            <span>📄 Full LaTeX</span>
+            <span>📄 Full LaTeX Code (roy.tex)</span>
           </button>
         </div>
 
         <div class="latex-toolbar">
           <div class="latex-title-wrap">
-            <span class="latex-badge" id="active-suite-view-badge">SKILLS</span>
-            <span class="latex-filename" id="active-suite-view-filename">Tailored for Target JD</span>
-            <span id="overleaf-status-pill" class="status-pill ready">⚡ Ready</span>
+            <span class="latex-badge">LATEX</span>
+            <span class="latex-filename">roy.tex (resume.cls)</span>
+            <span id="overleaf-status-pill" class="status-pill ready">⚡ Overleaf Sync Ready</span>
           </div>
           <div class="toolbar-actions">
             <button id="btn-download-tex" class="btn btn-small btn-secondary">💾 Save .tex</button>
-            <button id="btn-print-pdf" class="btn btn-small btn-secondary" title="Instant high-quality ATS-proof PDF in your browser">🖨️ Print Resume PDF</button>
             <button id="btn-copy-latex" class="btn btn-small btn-primary">📋 Copy All LaTeX</button>
             <button id="btn-copy-skills" class="btn btn-small btn-secondary">📋 Copy Skills Block</button>
-            <button id="btn-reset-resume" class="btn btn-small btn-secondary">🔄 Reset Base</button>
+            <button id="btn-reset-resume" class="btn btn-small btn-secondary">🔄 Reset Original</button>
           </div>
         </div>
 
-        <!-- View 1: Live Tailored Technical Skills Display -->
+        <!-- Tab View 1: Live Tailored Technical Skills Display -->
         <div id="view-skills" class="skills-preview-container">
           <div class="skills-preview-header">
             <div>
@@ -267,308 +211,12 @@
           </div>
         </div>
 
-        <!-- View 2: Before & After Diff / Track Changes -->
-        <div id="view-diff" class="diff-view-container" style="display: none;">
-          <div class="diff-header-bar">
-            <div>
-              <div class="diff-title">⚖️ Before vs. After Resume Comparison &amp; Track Changes</div>
-              <div class="diff-subtitle">Audit every enhancement made for the target job description with 0% AI feel and exact interview defense tips.</div>
-            </div>
-            <div class="diff-actions">
-              <button type="button" id="btn-print-diff-pdf" class="btn btn-small btn-accent">
-                🖨️ Download / Print Changes PDF
-              </button>
-            </div>
-          </div>
-
-          <div class="diff-summary-cards">
-            <div class="diff-metric-card">
-              <span class="diff-metric-num" id="diff-count-keywords">0</span>
-              <span class="diff-metric-label">Keywords Integrated</span>
-            </div>
-            <div class="diff-metric-card">
-              <span class="diff-metric-num" id="diff-count-bullets">3</span>
-              <span class="diff-metric-label">Tailored Project Bullets</span>
-            </div>
-            <div class="diff-metric-card">
-              <span class="diff-metric-num highlight-green">0% AI</span>
-              <span class="diff-metric-label">Wall Street Phrasing</span>
-            </div>
-            <div class="diff-metric-card">
-              <span class="diff-metric-num highlight-blue">100%</span>
-              <span class="diff-metric-label">1-Page ATS Compliance</span>
-            </div>
-          </div>
-
-          <div class="changelog-table-wrap">
-            <table class="changelog-table">
-              <thead>
-                <tr>
-                  <th style="width: 18%;">Section &amp; Project</th>
-                  <th style="width: 32%;">Original Baseline Text</th>
-                  <th style="width: 32%;">Enhanced Text (100% ATS / 0% AI)</th>
-                  <th style="width: 18%;">Interview Defense Tip</th>
-                </tr>
-              </thead>
-              <tbody id="changelog-table-body">
-                <!-- Dynamically injected -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- View 3: Recruiter Audit & 100 ATS Score -->
-        <div id="view-recruiter" class="recruiter-view-container" style="display: none;">
-          <div class="recruiter-header-bar">
-            <div>
-              <div class="recruiter-title">💼 Senior Wall Street &amp; Corporate Recruiter Audit</div>
-              <div class="recruiter-subtitle">Simulated Bulge Bracket &amp; Fortune 500 First-Round Screening Evaluation</div>
-            </div>
-            <div class="recruiter-overall-badge">
-              <span class="recruiter-score-num" id="recruiter-score-display">100</span>
-              <span class="recruiter-score-denom">/100 ATS SCORE</span>
-            </div>
-          </div>
-
-          <div class="recruiter-verdict-banner" id="recruiter-verdict-banner">
-            <div class="verdict-icon">🏆</div>
-            <div class="verdict-content">
-              <h3 class="verdict-title" id="recruiter-verdict-title">FIRST-ROUND INTERVIEW GUARANTEED</h3>
-              <p class="verdict-text" id="recruiter-verdict-text">Candidate profile matches 100% of core JD keywords, exhibits institutional-grade financial modeling skills, and completely avoids generic AI buzzwords.</p>
-            </div>
-          </div>
-
-          <div class="recruiter-metrics-grid">
-            <div class="recruiter-metric-box">
-              <div class="recruiter-box-header">
-                <span>ATS Keyword Density</span>
-                <strong class="text-green" id="audit-metric-density">100% Match</strong>
-              </div>
-              <p class="recruiter-box-detail">All mandatory technical skills, financial concepts, and qualifications are present in standard linear format.</p>
-            </div>
-            <div class="recruiter-metric-box">
-              <div class="recruiter-box-header">
-                <span>Authentic Phrasing (0% AI)</span>
-                <strong class="text-green">PASS (0.00 AI Index)</strong>
-              </div>
-              <p class="recruiter-box-detail">Zero robotic fluff. Every bullet uses genuine Wall Street Oasis terminology: DCF, LBO, 3-Statement, BvA variance, EBITDA.</p>
-            </div>
-            <div class="recruiter-metric-box">
-              <div class="recruiter-box-header">
-                <span>Impact &amp; Quantification</span>
-                <strong class="text-green">98th Percentile</strong>
-              </div>
-              <p class="recruiter-box-detail">Strict adherence to XYZ formula: $38M budget, $620K savings, 2.1% variance, 18 companies valued across $150M–$600M.</p>
-            </div>
-            <div class="recruiter-metric-box">
-              <div class="recruiter-box-header">
-                <span>Layout &amp; Length Check</span>
-                <strong class="text-green">Single-Page Lock</strong>
-              </div>
-              <p class="recruiter-box-detail">Strict 1-page geometry (0.35in margins, 0.82 stretch) compliant with Goldman Sachs / J.P. Morgan parsing engines.</p>
-            </div>
-          </div>
-
-          <div class="recruiter-feedback-sections">
-            <div class="recruiter-feedback-card">
-              <h4 class="feedback-heading text-green">🌟 Recruiter Highlights &amp; Why You Pass The Screen:</h4>
-              <ul class="feedback-list" id="recruiter-highlights-list">
-                <!-- Injected via JS -->
-              </ul>
-            </div>
-            <div class="recruiter-feedback-card">
-              <h4 class="feedback-heading text-amber">⚠️ Watchouts &amp; Questions You Must Prepare For:</h4>
-              <ul class="feedback-list" id="recruiter-watchouts-list">
-                <!-- Injected via JS -->
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- View 4: Personalized Interview Preparation -->
-        <div id="view-interview" class="interview-view-container" style="display: none;">
-          <div class="interview-header-bar">
-            <div>
-              <div class="interview-title">🎤 Personalized Finance Interview Preparation Guide</div>
-              <div class="interview-subtitle">Tailored technical drills, STAR project deep-dives, and behavioral responses designed specifically for this role.</div>
-            </div>
-            <div class="interview-actions">
-              <button type="button" id="btn-print-interview-pdf" class="btn btn-small btn-accent">
-                🖨️ Download / Print Interview Prep PDF
-              </button>
-            </div>
-          </div>
-
-          <div class="interview-accordion-list" id="interview-prep-content">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-
-        <!-- View 5: Tailored Job-Specific Cover Letter -->
-        <div id="view-cover" class="cover-view-container" style="display: none;">
-          <div class="cover-header-bar">
-            <div>
-              <div class="cover-title">📝 Job-Specific Tailored Cover Letter</div>
-              <div class="cover-subtitle">Narrative storytelling distinct from your resume bullets — conveying market passion, company culture alignment, and analyst stamina.</div>
-            </div>
-            <div class="cover-actions">
-              <button type="button" id="btn-copy-cover" class="btn btn-small btn-secondary">
-                📋 Copy Cover Letter
-              </button>
-              <button type="button" id="btn-print-cover-pdf" class="btn btn-small btn-accent">
-                🖨️ Download / Print Cover Letter PDF
-              </button>
-            </div>
-          </div>
-
-          <div class="cover-letter-paper">
-            <div class="cover-letter-header">
-              <h2 class="applicant-name" id="cover-applicant-name">Sanskriti Roy</h2>
-              <div class="applicant-contact" id="cover-applicant-contact">New York, NY | (212) 555-0194 | sanskriti.roy@stern.nyu.edu | linkedin.com/in/sanskriti-roy</div>
-              <div class="letter-divider"></div>
-            </div>
-
-            <div class="cover-letter-meta">
-              <div class="cover-date" id="cover-date-display">September 18, 2026</div>
-              <div class="cover-recipient" id="cover-recipient-display">
-                <strong>Campus Recruiting Team &amp; Hiring Committee</strong><br>
-                <span id="cover-company-display">Goldman Sachs</span><br>
-                200 West Street, New York, NY 10282
-              </div>
-            </div>
-
-            <div class="cover-body-editor-wrap">
-              <textarea id="cover-letter-textarea" class="cover-letter-textarea" spellcheck="true"></textarea>
-            </div>
-
-            <div class="cover-signature-wrap">
-              <div>Sincerely,</div>
-              <div class="signature-name" id="cover-signature-name">Sanskriti Roy</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- View 6: Networking & Outreach Email Suite -->
-        <div id="view-outreach" class="outreach-view-container" style="display: none;">
-          <div class="outreach-header-bar">
-            <div>
-              <div class="outreach-title">✉️ Networking &amp; Referral Email Outreach Suite</div>
-              <div class="outreach-subtitle">High-conversion outreach templates for recruiters, alumni, senior bankers, current employees, and referral requests.</div>
-            </div>
-          </div>
-
-          <!-- Outreach Type Selector Chips -->
-          <div class="outreach-chips-row">
-            <button type="button" class="outreach-type-chip active" data-type="recruiter">🏢 Recruiter Outreach</button>
-            <button type="button" class="outreach-type-chip" data-type="alumni">🎓 Stern / School Alumni</button>
-            <button type="button" class="outreach-type-chip" data-type="senior">💼 Senior Banker / MD</button>
-            <button type="button" class="outreach-type-chip" data-type="peer">👥 Current Analyst / Peer</button>
-            <button type="button" class="outreach-type-chip" data-type="referral">🤝 Internal Referral Request</button>
-            <button type="button" class="outreach-type-chip" data-type="thankyou">💌 Post-Interview Thank You</button>
-          </div>
-
-          <!-- Dynamic Configuration Bar -->
-          <div class="outreach-config-bar">
-            <div class="config-field">
-              <label for="outreach-recipient-name">Recipient Name:</label>
-              <input type="text" id="outreach-recipient-name" placeholder="e.g. Sarah Jenkins or Hiring Manager">
-            </div>
-            <div class="config-field">
-              <label for="outreach-tone-select">Tone:</label>
-              <select id="outreach-tone-select" class="config-select">
-                <option value="warm">Collegiate &amp; Enthusiastic</option>
-                <option value="formal">Formal &amp; Executive</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Subject Line Options -->
-          <div class="outreach-subject-box">
-            <div class="subject-box-label">Recommended Subject Lines (Tested for &gt;70% Open Rates):</div>
-            <div id="outreach-subject-options" class="subject-options-list">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
-
-          <!-- Email Preview Box -->
-          <div class="outreach-email-card">
-            <div class="email-card-header">
-              <span class="email-badge">EMAIL DRAFT</span>
-              <div class="email-actions">
-                <button type="button" id="btn-copy-outreach-email" class="btn btn-tiny btn-secondary">
-                  📋 Copy Full Email
-                </button>
-                <a id="btn-mailto-outreach" href="#" class="btn btn-tiny btn-accent" target="_blank">
-                  📬 Open in Mail App
-                </a>
-              </div>
-            </div>
-            <textarea id="outreach-body-textarea" class="outreach-textarea" rows="12"></textarea>
-          </div>
-        </div>
-
-        <!-- View 7: Full LaTeX Editor Area -->
+        <!-- Tab View 2: Direct LaTeX Editor Area -->
         <div id="view-latex" class="latex-editor-container" style="display: none;">
           <textarea id="latex-output" spellcheck="false" class="code-editor"></textarea>
         </div>
       </section>
     </main>
-  </div>
-
-  <!-- Modal: Overleaf Project URL Settings -->
-  <div id="modal-overleaf-settings" class="modal-backdrop" style="display: none;">
-    <div class="modal-box">
-      <div class="modal-header">
-        <div class="modal-title">⚙️ Overleaf Project Settings</div>
-        <button type="button" id="btn-close-overleaf-modal" class="btn-close-modal">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-sub">Configure your personal Overleaf project link so ResumeSync AI can 1-click sync your tailored LaTeX directly to your editor.</p>
-        <div class="form-group">
-          <label class="form-label" for="overleaf-url-input">Your Overleaf Project URL</label>
-          <input type="url" id="overleaf-url-input" class="form-input" placeholder="https://www.overleaf.com/project/69787f4c07ea46326eb8587e">
-          <span class="link-hint">Format: https://www.overleaf.com/project/&lt;your-project-id&gt;</span>
-        </div>
-        <div class="guardrails-notice">
-          <strong>⚡ 1-Click Sync Automation:</strong>
-          <ul>
-            <li>Clicking <strong>"Overleaf Sync"</strong> puts your tailored LaTeX on your clipboard and opens this project in a new tab.</li>
-            <li>Press <strong>Cmd+V</strong> (or Ctrl+V) and click <strong>Recompile</strong> in Overleaf.</li>
-          </ul>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="btn-create-overleaf-project" class="btn btn-secondary">
-          + Open Overleaf
-        </button>
-        <button type="button" id="btn-save-overleaf-url" class="btn btn-primary">
-          Save Settings
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Paste Custom LaTeX Resume -->
-  <div id="modal-paste-latex" class="modal-backdrop" style="display: none;">
-    <div class="modal-box" style="max-width: 680px;">
-      <div class="modal-header">
-        <div class="modal-title">📋 Paste Your LaTeX Resume Code</div>
-        <button type="button" id="btn-close-paste-modal" class="btn-close-modal">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-sub">Paste your entire LaTeX resume document below. ResumeSync AI will detect your name, existing skills, and template structure.</p>
-        <div class="form-group">
-          <textarea id="paste-latex-textarea" class="code-editor" style="height: 320px;" placeholder="\documentclass{...}
-\begin{document}
-...
-\end{document}"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="btn-cancel-paste-modal" class="btn btn-secondary">Cancel</button>
-        <button type="button" id="btn-apply-pasted-latex" class="btn btn-primary">Load &amp; Optimize Resume</button>
-      </div>
-    </div>
   </div>
 
   <script src="app.js"></script>
