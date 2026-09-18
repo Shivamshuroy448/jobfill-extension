@@ -265,13 +265,16 @@ class OverleafSyncHandler(http.server.BaseHTTPRequestHandler):
         except Exception as e:
             print(f"Notice reading resumes directory: {e}", flush=True)
 
-        self.wfile.write(json.dumps({
-            "status": "running",
-            "port": PORT,
-            "targetDir": DESKTOP_RESUMES_DIR,
-            "currentCompany": CURRENT_TARGET_COMPANY,
-            "companies": sorted(companies)
-        }).encode("utf-8"))
+        try:
+            self.wfile.write(json.dumps({
+                "status": "running",
+                "port": PORT,
+                "targetDir": DESKTOP_RESUMES_DIR,
+                "currentCompany": CURRENT_TARGET_COMPANY,
+                "companies": sorted(companies)
+            }).encode("utf-8"))
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
 
     def do_POST(self):
         global CURRENT_TARGET_COMPANY
